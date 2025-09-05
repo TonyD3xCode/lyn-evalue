@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LYN AutoSales — Evaluador</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="title">LYN AutoSales — Evaluador</div>
+    <div class="muted">Neon + Netlify Blobs</div>
+  </div>
+</header>
+
+<section id="view-home" class="view active">
+  <div class="grid" id="veh-grid"></div>
+  <div id="empty" class="empty" style="display:none">
+    <div style="font-weight:800">Aún no hay vehículos</div>
+    <div class="muted">Toca el botón para crear el primero.</div>
+    <button class="btn primary" onclick="newVehicle()">+ Nuevo vehículo</button>
+  </div>
+</section>
+
+<section id="view-veh" class="view">
+  <div class="panel">
+    <div class="actions">
+      <button class="btn" onclick="go('home')">← Volver</button>
+    </div>
+    <div class="row3">
+      <div><div class="muted">Vehículo ID</div><input id="vehId" type="text" placeholder="LYNA-0001"></div>
+      <div><div class="muted">Fecha</div><input id="fecha" type="text" placeholder="YYYY-MM-DD"></div>
+      <div><div class="muted">VIN (17)</div><input id="vin" type="text" maxlength="17" placeholder="1HGCM82633A004352"></div>
+    </div>
+    <div class="row3">
+      <div><div class="muted">Marca</div><input id="marca" type="text"></div>
+      <div><div class="muted">Modelo</div><input id="modelo" type="text"></div>
+      <div><div class="muted">Año</div><input id="anio" type="text"></div>
+    </div>
+    <div class="row3">
+      <div><div class="muted">Color</div><input id="color" type="text"></div>
+      <div><div class="muted">País</div><input id="pais" type="text"></div>
+      <div><div class="muted">Foto del vehículo</div><input id="vehPhoto" type="file" accept="image/*" capture="environment"><div id="vehPhotoThumb" class="thumb"></div></div>
+    </div>
+    <div><div class="muted">Notas</div><textarea id="notas"></textarea></div>
+    <div class="actions">
+      <button class="btn" onclick="decodeVIN()">Decodificar VIN</button>
+      <button class="btn primary" onclick="saveVehicle()">Guardar</button>
+    </div>
+  </div>
+</section>
+
+<section id="view-dmg" class="view">
+  <div class="panel">
+    <div class="actions">
+      <button class="btn" onclick="go('home')">← Inicio</button>
+      <button class="btn" onclick="toReport()">Ver reporte</button>
+      <button class="btn primary" id="addDamage">Agregar daño</button>
+    </div>
+    <div id="damages"></div>
+  </div>
+</section>
+
+<section id="view-report" class="view">
+  <div class="panel">
+    <h2>Reporte de Evaluación — LYN AutoSales</h2>
+    <div class="row3">
+      <div><div class="muted">Vehículo ID</div><div id="p_vehId" class="pill">—</div></div>
+      <div><div class="muted">Fecha</div><div id="p_fecha" class="pill">—</div></div>
+      <div><div class="muted">VIN</div><div id="p_vin" class="pill">—</div></div>
+    </div>
+    <div class="row3">
+      <div><div class="muted">Marca</div><div id="p_marca">—</div></div>
+      <div><div class="muted">Modelo</div><div id="p_modelo">—</div></div>
+      <div><div class="muted">Año</div><div id="p_anio">—</div></div>
+    </div>
+    <div class="row3">
+      <div><div class="muted">Color</div><div id="p_color">—</div></div>
+      <div><div class="muted">País</div><div id="p_pais">—</div></div>
+      <div><div class="muted">Notas</div><div id="p_notas">—</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="totals">
+      <strong>Severidad global:</strong> <span id="p_sevGlobal" class="pill">BAJO</span>
+      <strong>Total estimado:</strong> <span id="p_total" class="pill money">$0</span>
+    </div>
+    <div class="divider"></div>
+    <div id="p_listado"></div>
+    <div class="actions">
+      <button class="btn" onclick="go('dmg')">← Daños</button>
+      <button class="btn primary" onclick="exportPDF()">Exportar PDF</button>
+    </div>
+  </div>
+</section>
+
+<div id="imgViewer" style="display:none">
+  <div id="imgViewerBack"></div>
+  <div id="imgViewerUi">
+    <button id="ivClose" title="Cerrar">✕</button>
+    <div class="ivCount"><span id="ivNow">1</span>/<span id="ivTotal">1</span></div>
+    <button id="ivPrev" title="Anterior">‹</button>
+    <button id="ivNext" title="Siguiente">›</button>
+  </div>
+  <img id="ivImg" alt="Foto de daño">
+</div>
+
+<button class="fab" onclick="newVehicle()">+ Nuevo</button>
+
+<script src="app.js"></script>
+</body>
+</html>

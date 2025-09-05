@@ -1,0 +1,9 @@
+{
+  "name": "lyn-autosales-evaluador",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.11.5",
+    "@netlify/blobs": "^6.5.0"
+  }
+}
