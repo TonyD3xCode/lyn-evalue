@@ -4,7 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>LYN AutoSales — Evaluador</title>
-  <link rel="stylesheet" href="styles.css">
+ <style>
+  body{background:#0b0f14;color:#e9f1f7;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .view{display:none}.view.active{display:block}
+</style>
+  <link rel="preload" href="/styles.css?v=3" as="style">
+  <link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body>
   <div class="header">
@@ -127,6 +132,6 @@
   </section>
 
   <button class="fab" onclick="newVehicle()">+ Nuevo</button>
-  <script src="app.js"></script>
+  <script defer src="/app.js?v=3"></script>
 </body>
 </html>
