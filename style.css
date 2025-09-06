@@ -1,61 +1,188 @@
-.root{
-  --bg:#0b0f14; --surface:#0f151b; --elev:#131b23; --border:#1f2b37;
-  --text:#e9f1f7; --muted:#9ab1c4; --brand:#4cc2ff; --danger:#ff6b6b;
+/* =========================================================
+ * LYN AutoSales — Evaluador (UI)
+ * Tema oscuro, limpio y responsive
+ * =======================================================*/
+
+:root{
+  --bg:#0b0f14;
+  --card:#0f1620;
+  --panel:#0e1520;
+  --border:#223447;
+  --txt:#e9f1f7;
+  --muted:#9fb3c8;
+
+  --accent:#09d3ac;        /* botones principales */
+  --accent-ink:#001b14;
+  --danger:#ff5a6a;        /* acciones destructivas */
+  --money:#f6c945;         /* totales en USD */
+  --ring: #39ffe2;         /* foco accesible */
 }
+
+/* Reset mínimo */
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:linear-gradient(180deg,#0b0f14,#0c1117);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-img{max-width:100%;display:block}
-
-/* Header */
-.header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(11,15,20,.7);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.header img.logo{height:28px;width:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.3))}
-.header .title{font-weight:800;letter-spacing:.3px}
-.header .sub{color:var(--muted);font-size:12px}
-
-/* Layout / Cards */
-.container{padding:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.card{background:var(--elev);border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
-.card .thumb{width:100%;height:160px;object-fit:cover;border-top-left-radius:16px;border-top-right-radius:16px;background:#0f1720;border-bottom:1px solid var(--border)}
-.card .body{padding:12px 14px;display:grid;gap:6px}
-.card .meta{display:flex;align-items:center;justify-content:space-between}
-
-/* Pills / Buttons */
-.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid #265a75;background:#0f151c;font-weight:700;font-size:12px;color:#c7ecff}
-.pill.money{background:#0e171d;border-color:#275f79;color:#baf0ff}
-.btn{appearance:none;border:1px solid #224e65;background:#0f151c;color:#daf2ff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;transition:.2s}
-.btn:hover{filter:brightness(1.06)}
-.btn.primary{background:var(--brand);border-color:#2f9cd2;color:#06131c}
-.btn.danger{background:var(--danger);border-color:var(--danger);color:#240f10}
-
-input[type=text],input[type=number],textarea,select,input[type=file]{
-  width:100%;padding:12px;border:1px solid #2a3c4b;border-radius:12px;background:#0c1218;color:var(--text);font-size:15px
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--txt);
+  font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
-textarea{min-height:90px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin:18px}
-.section-title{margin:12px 16px;color:var(--muted)}
-.empty{margin:24px;display:grid;gap:10px;place-items:center;padding:36px;border:1px dashed #223344;border-radius:16px;background:#0d141b;color:#a8c2d4}
+/* ---------- Topbar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px;
+  background:rgba(11,15,20,.92);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:saturate(1.1) blur(6px);
+}
+.topbar .logo{
+  width:28px; height:28px; object-fit:contain;
+  border-radius:6px; background:#111;
+}
+.brand{font-weight:600}
+.brand .sub{margin-left:8px; color:var(--muted); font-size:.85rem}
 
-/* Damages list */
-.dmg-list .item{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;padding:10px;border-bottom:1px solid var(--border)}
-.dmg-list .item img{width:96px;height:72px;object-fit:cover;border-radius:10px;border:1px solid #223447}
-.dmg-list .item .title{font-weight:700}
-.dmg-list .item .meta{color:var(--muted);font-size:12px}
+/* ---------- Layout ---------- */
+main{padding:14px}
+.view{display:none}
+.view.active{display:block}
 
-/* Modal / sheet (detalle de daño) */
-.sheet{position:fixed;right:0;top:0;bottom:0;width:640px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:-20px 0 60px rgba(0,0,0,.4);transform:translateX(100%);transition:.25s;z-index:50;overflow:auto}
-.sheet.open{transform:translateX(0)}
-.sheet .head{position:sticky;top:0;background:rgba(15,21,27,.8);backdrop-filter:blur(10px);padding:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.sheet .content{padding:16px}
-.sheet .thumbs{display:flex;gap:8px;flex-wrap:wrap}
-.sheet .thumbs img{width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid #223447}
+.row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(280px,1fr));
+  gap:14px;
+}
+.grid2{
+  display:grid; gap:12px;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+}
 
-/* FAB */
-.fab{position:fixed;right:18px;bottom:18px;z-index:10;border-radius:999px;padding:16px 20px;font-size:16px;background:var(--brand);color:#05151f;border:1px solid #2f9cd2;box-shadow:0 20px 60px rgba(0,0,0,.35);font-weight:900}
+/* ---------- Empty state ---------- */
+.empty{
+  display:grid; place-items:center;
+  height:140px; margin:10px 0;
+  background:var(--card);
+  color:var(--muted);
+  text-align:center;
+  border:1px dashed var(--border);
+  border-radius:12px;
+}
 
-.view{display:none}.view.active{display:block}
-@media (max-width:720px){ .row3{grid-template-columns:1fr 1fr} .row{grid-template-columns:1fr} }
+/* ---------- Cards (home/reporte) ---------- */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+}
+.card .body{padding:10px}
+.card .thumb{
+  width:100%; height:160px;
+  background:#0a1118; object-fit:cover; display:block;
+  border-bottom:1px solid var(--border);
+}
+.meta{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.sub{color:var(--muted); font-size:.9rem}
+.money{background:var(--money); color:#000; font-weight:700; border-color:#000}
+
+/* ---------- Pills ---------- */
+.pill{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; border-radius:999px;
+  border:1px solid var(--border); color:var(--muted);
+  font-size:.85rem;
+}
+.pill.money{background:var(--money); color:#000; border-color:#000}
+
+/* ---------- Buttons ---------- */
+.btn{
+  background:#162130; color:var(--txt);
+  border:1px solid var(--border);
+  padding:10px 12px; border-radius:10px;
+  cursor:pointer; user-select:none;
+  transition:transform .04s ease, border-color .15s ease;
+}
+.btn:hover{border-color:#2c4866}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.btn.danger{background:var(--danger); border-color:var(--danger); color:#fff}
+
+/* ---------- Floating Action Button ---------- */
+.fab{
+  position:fixed; right:16px; bottom:16px; z-index:15;
+  background:var(--accent); color:var(--accent-ink);
+  border:none; padding:14px 18px; border-radius:999px;
+  font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.25);
+}
+
+/* ---------- Forms ---------- */
+label{display:grid; gap:6px; color:var(--muted); font-size:.95rem}
+input, select, textarea{
+  width:100%; color:var(--txt);
+  background:#0a0f14; border:1px solid var(--border);
+  border-radius:10px; padding:10px;
+  outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+}
+textarea{min-height:110px; resize:vertical}
+input:focus, select:focus, textarea:focus{
+  border-color:var(--ring);
+  box-shadow:0 0 0 3px rgba(57,255,226,.18);
+}
+.file input[type=file]{padding:8px; background:#0a0f14}
+
+/* Mini thumb en edición de vehículo */
+#vehPhotoThumb img{
+  max-width:160px; border:1px solid var(--border);
+  border-radius:12px; display:block;
+}
+
+/* ---------- Lista de daños ---------- */
+.list{display:flex; flex-direction:column; gap:10px}
+.item{
+  display:grid; grid-template-columns:84px 1fr auto;
+  gap:12px; align-items:center;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:8px 10px; cursor:pointer;
+}
+.item:hover{border-color:#2c4866}
+.item img{width:84px; height:64px; object-fit:cover; border-radius:10px; background:#0a1118}
+
+/* ---------- Sheet (panel lateral/ modal) ---------- */
+.sheet{
+  position:fixed; inset:0; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,.55); z-index:30;
+}
+.sheet.open{display:flex}
+.sheet-card{
+  width:min(720px,94vw); max-height:90vh; overflow:auto;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:14px; padding:14px;
+}
+.sheet-head{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px; font-weight:600;
+}
+.thumbs{display:flex; gap:8px; flex-wrap:wrap}
+.thumbs img{
+  width:96px; height:96px; object-fit:cover;
+  border-radius:10px; border:1px solid var(--border);
+}
+
+/* ---------- Reporte ---------- */
+#p_listado .card{margin:10px 0; padding:10px}
+#p_listado .card .sub{margin-top:4px}
+
+/* ---------- Utilidades ---------- */
+.hidden{display:none !important}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 760px){
+  .grid2{grid-template-columns:1fr}
+  .topbar{padding:10px 12px}
+}
