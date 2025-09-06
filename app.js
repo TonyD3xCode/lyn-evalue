@@ -316,20 +316,30 @@ $('d_fotos').addEventListener('change', async ()=>{
 });
 
 /* Guardar / eliminar un daño */
-$('dmgSave').addEventListener('click', async ()=>{
+$('dmgSave').addEventListener('click', async (ev)=>{
   if(!currentDamage) return;
+  const btn = ev.currentTarget;
+  if (btn.disabled) return;        // evita doble disparo
+  btn.disabled = true;
 
-  // normaliza payload (siempre incluye veh_id)
-  const payload = {
-    id: currentDamage.id,
-    veh_id: currentDamage.veh_id || currentVeh,
-    parte: $('d_parte').value,
-    ubic: $('d_ubic').value,
-    sev: $('d_sev').value,
-    descrption: $('d_descr').value, // <- columna tal cual en BD
-    cost: Number($('d_cost').value || 0),
-    imgs: currentDamage.imgs || []
-  };
+  try{
+    const payload = {
+      id: currentDamage.id,
+      veh_id: currentDamage.veh_id || currentVeh,
+      parte: $('d_parte').value,
+      ubic: $('d_ubic').value,
+      sev: $('d_sev').value,
+      descrption: $('d_descr').value,
+      cost: Number($('d_cost').value || 0),
+      imgs: currentDamage.imgs || []
+    };
+    await db.saveDamage(payload);
+    closeSheet();
+    await renderDamageList();
+  } finally {
+    btn.disabled = false;
+  }
+});
 
   await db.saveDamage(payload);
   closeSheet();
