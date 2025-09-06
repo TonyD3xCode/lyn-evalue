@@ -265,6 +265,16 @@ function addDamage(){
   openSheet(d, true);
 }
 
+function validateDamageForm(){
+  return $('d_parte').value && $('d_sev').value && $('d_cost').value !== '';
+}
+$('d_parte').addEventListener('change', toggleSave);
+$('d_sev').addEventListener('change', toggleSave);
+$('d_cost').addEventListener('input', toggleSave);
+function toggleSave(){
+  $('dmgSave').disabled = !validateDamageForm();
+}
+
 /* ---------- Panel (sheet) ---------- */
 function openSheet(damage, isNew=false){
   currentDamage = { ...damage, isNew };
