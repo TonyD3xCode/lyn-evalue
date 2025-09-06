@@ -135,11 +135,13 @@ async function renderHome(){
  * Navegación + CRUD Vehículo
  * =======================================================*/
 function go(view){
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('v-'+view).classList.add('active');
-  // Mostrar el FAB solo en Home (crea vehículos)
-  const fab = document.querySelector('.fab');
-  if (fab) fab.style.display = (view === 'home') ? 'block' : 'none';
+
+  // Mostrar FAB SOLO en Home
+  const fab = $('fabNew');
+  if (fab) fab.classList.toggle('hidden', view !== 'home');
+
   window.scrollTo(0,0);
 }
 
@@ -453,5 +455,7 @@ async function decodeVIN({ autoSave=true } = {}){
 document.addEventListener('DOMContentLoaded', ()=>{
   $('fecha').value = today();
   renderHome();
+  // ← engancha el FAB una sola vez
+  $('fabNew').addEventListener('click', newVehicle);
 });
 $('addDamage').addEventListener('click', ()=> addDamage());
