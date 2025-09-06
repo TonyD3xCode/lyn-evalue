@@ -1,14 +1,27 @@
+/* =========================================================
+ * LYN AutoSales — Evaluador (Frontend)
+ * app.js (ordenado y con fixes de persistencia)
+ * =======================================================*/
+
+/* ---------- Config ---------- */
 const API = '/.netlify/functions';
 const VERSION = Date.now().toString();
 
+/* ---------- Helpers ---------- */
 const $ = (id) => document.getElementById(id);
 const today = () => {
-  const d=new Date(),p=n=>n.toString().padStart(2,'0');
+  const d = new Date(), p = (n)=> String(n).padStart(2,'0');
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
 };
-const money = (n) => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n||0));
-const esc = (s)=> (s||'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
+const money = (n) => new Intl.NumberFormat('en-US',{
+  style:'currency', currency:'USD', maximumFractionDigits:0
+}).format(Number(n||0));
+const esc = (s)=> (s||'').replace(/[&<>\"']/g, m => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'
+}[m]));
 const shortVIN = (v)=> v? v.slice(0,3)+'...'+v.slice(-5) : '—';
+
+/* Partes del auto */
 const partsList = [
   'Parachoques delantero','Parachoques trasero','Capó','Techo','Cajuela/Portón',
   'Guardabarros izq.','Guardabarros der.','Puerta delantera izq.','Puerta delantera der.',
@@ -17,124 +30,266 @@ const partsList = [
   'Marco frontal','Soporte radiador','Travesaño','Panel lateral izq.','Panel lateral der.'
 ];
 
-async function api(path,opt={}){ try{ const r=await fetch(`${API}/${path}${path.includes('?')?'&':'?'}t=${VERSION}`,opt); if(!r.ok) throw 0; return await r.json(); } catch { return null; } }
+/* Resize imagen → DataURL */
+function resizeToDataURL(file, maxW=1280, quality=.82){
+  return new Promise((resolve,reject)=>{
+    const fr = new FileReader();
+    const img = new Image();
+    fr.onload = ()=> img.src = fr.result;
+    fr.onerror = reject;
+    img.onload = ()=>{
+      const scale = Math.min(1, maxW/img.width);
+      const w = Math.round(img.width*scale);
+      const h = Math.round(img.height*scale);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- API ---------- */
+async function api(path, opt={}){
+  try{
+    const url = `${API}/${path}${path.includes('?')?'&':'?'}t=${VERSION}`;
+    const r = await fetch(url, opt);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){
+    console.error('API error:', e);
+    alert('Problema de conexión. Intenta de nuevo.');
+    return null;
+  }
+}
+
 const db = {
   listVehicles: () => api('vehicles').then(x=>Array.isArray(x)?x:[]),
   getVehicle: (id) => api('vehicles?id='+encodeURIComponent(id)),
-  saveVehicle: (v) => api('vehicles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)}),
-  deleteVehicle: (id) => api('vehicles',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}),
+  saveVehicle: (v) => api('vehicles',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(v)
+  }),
+  deleteVehicle: (id) => api('vehicles',{
+    method:'DELETE', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id})
+  }),
   listDamages: (vehId) => api('damages?vehId='+encodeURIComponent(vehId)).then(x=>Array.isArray(x)?x:[]),
-  saveDamage: (d) => api('damages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}),
-  deleteDamage: (id) => api('damages',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}),
+  saveDamage: (d) => api('damages',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(d)
+  }),
+  deleteDamage: (id) => api('damages',{
+    method:'DELETE', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id})
+  }),
 };
 
-let currentVeh = null;
-let currentDamage = null;
+/* ---------- Estado ---------- */
+let currentVeh = null;     // veh_id (string)
+let currentDamage = null;  // daño en edición
 
-/* Home */
+/* =========================================================
+ * HOME (tarjetas)
+ * =======================================================*/
 async function renderHome(){
-  const grid = $('veh-grid'), empty = $('empty'); grid.innerHTML='';
+  const grid = $('veh-grid'), empty = $('empty');
+  grid.innerHTML = '';
   const vehicles = await db.listVehicles();
-  empty.style.display = vehicles.length? 'none' : 'grid';
+  empty.style.display = vehicles.length ? 'none' : 'grid';
+
   for(const v of vehicles){
-    const id = v.veh_id || v.vehId;
-    const damages = await db.listDamages(id);
+    const vehId = v.veh_id || v.vehId || '';
+    const damages = await db.listDamages(vehId);
     const total = damages.reduce((s,d)=> s + Number(d.cost||0), 0);
-    const card = document.createElement('div'); card.className='card';
+    const card = document.createElement('div');
+    card.className = 'card';
     card.innerHTML = `
-      <img class="thumb" src="${v.foto_vehiculo || ''}" loading="lazy">
+      <img class="thumb" src="${v.foto_vehiculo || ''}" loading="lazy" alt="">
       <div class="body">
         <div class="meta">
           <strong>${esc(v.marca||'')} ${esc(v.modelo||'')} ${esc(v.anio||'')}</strong>
           <span class="pill money">${money(total)}</span>
         </div>
         <div class="sub">VIN: ${esc(shortVIN(v.vin))}</div>
-        <div class="sub">ID: ${esc(id)}</div>
+        <div class="sub">ID: ${esc(vehId)}</div>
       </div>
       <div class="row" style="padding:12px;border-top:1px solid var(--border)">
-        <button class="btn" onclick="editVehicle('${id}')">Editar</button>
-        <button class="btn" onclick="openDamageList('${id}')">Daños</button>
-        <button class="btn" onclick="openReport('${id}')">Reporte</button>
-        <button class="btn danger" onclick="removeVehicle('${id}')">Eliminar</button>
+        <button class="btn" onclick="editVehicle('${vehId}')">Editar</button>
+        <button class="btn" onclick="openDamageList('${vehId}')">Daños</button>
+        <button class="btn" onclick="openReport('${vehId}')">Reporte</button>
+        <button class="btn danger" onclick="removeVehicle('${vehId}')">Eliminar</button>
       </div>`;
     grid.appendChild(card);
   }
 }
 
-/* Navegación / vehículo */
-function go(view){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById('v-'+view).classList.add('active'); window.scrollTo(0,0); }
-function newVehicle(){ currentVeh=null; $('vehId').value=''; $('fecha').value=today(); $('vin').value=''; $('marca').value=''; $('modelo').value=''; $('anio').value=''; $('color').value=''; $('pais').value=''; $('notas').value=''; $('vehPhoto').value=''; $('vehPhotoThumb').innerHTML=''; go('veh'); }
-async function editVehicle(id){ currentVeh=id; const v=await db.getVehicle(id)||{}; $('vehId').value=v.veh_id||id; $('fecha').value=(v.fecha||today()).toString().slice(0,10); $('vin').value=v.vin||''; $('marca').value=v.marca||''; $('modelo').value=v.modelo||''; $('anio').value=v.anio||''; $('color').value=v.color||''; $('pais').value=v.pais||''; $('notas').value=v.notas||''; $('vehPhotoThumb').innerHTML=v.foto_vehiculo?`<img src="${v.foto_vehiculo}" class="thumb" style="max-width:160px;border:1px solid #223447;border-radius:12px">`:''; go('veh'); }
-async function saveVehicle(){ const v={vehId:$('vehId').value.trim(),fecha:($('fecha').value||today()).slice(0,10),vin:$('vin').value.trim().toUpperCase(),marca:$('marca').value.trim(),modelo:$('modelo').value.trim(),anio:$('anio').value.trim(),color:$('color').value.trim(),pais:$('pais').value.trim(),notas:$('notas').value.trim(),fotoVehiculo: document.querySelector('#vehPhotoThumb img')?.src || null}; if(!v.vehId){ alert('Asigna un Vehículo ID'); return; } await db.saveVehicle(v); go('home'); renderHome(); }
-async function removeVehicle(id){ if(confirm('¿Eliminar vehículo?')){ await db.deleteVehicle(id); renderHome(); }}
+/* =========================================================
+ * Navegación + CRUD Vehículo
+ * =======================================================*/
+function go(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+view).classList.add('active');
+  window.scrollTo(0,0);
+}
 
-/* Foto vehiculo -> dataURL full (1280px) */
+function newVehicle(){
+  currentVeh = null;
+  $('vehId').value=''; $('fecha').value=today(); $('vin').value='';
+  $('marca').value=''; $('modelo').value=''; $('anio').value='';
+  $('color').value=''; $('pais').value=''; $('notas').value='';
+  $('vehPhoto').value=''; $('vehPhotoThumb').innerHTML='';
+  go('veh');
+}
+
+async function editVehicle(id){
+  currentVeh = id;
+  const v = await db.getVehicle(id) || {};
+  $('vehId').value  = v.veh_id || id;
+  $('fecha').value  = (v.fecha || today()).toString().slice(0,10);
+  $('vin').value    = v.vin || '';
+  $('marca').value  = v.marca || '';
+  $('modelo').value = v.modelo || '';
+  $('anio').value   = v.anio || '';
+  $('color').value  = v.color || '';
+  $('pais').value   = v.pais || '';
+  $('notas').value  = v.notas || '';
+  $('vehPhotoThumb').innerHTML = v.foto_vehiculo
+    ? `<img src="${v.foto_vehiculo}" class="thumb" style="max-width:160px;border:1px solid #223447;border-radius:12px">`
+    : '';
+  go('veh');
+}
+
+async function saveVehicle(){
+  const payload = {
+    veh_id:        $('vehId').value.trim(),
+    fecha:         ($('fecha').value || today()).slice(0,10),
+    vin:           $('vin').value.trim().toUpperCase(),
+    marca:         $('marca').value.trim(),
+    modelo:        $('modelo').value.trim(),
+    anio:          $('anio').value.trim(),
+    color:         $('color').value.trim(),
+    pais:          $('pais').value.trim(),
+    notas:         $('notas').value.trim(),
+    foto_vehiculo: document.querySelector('#vehPhotoThumb img')?.src || null
+  };
+  if(!payload.veh_id){ alert('Asigna un Vehículo ID'); return; }
+  await db.saveVehicle(payload);
+  go('home'); renderHome();
+}
+
+async function removeVehicle(id){
+  if(confirm('¿Eliminar vehículo?')){ await db.deleteVehicle(id); renderHome(); }
+}
+
+/* Foto de vehículo → dataURL (persistente) */
 document.addEventListener('change', async (ev)=>{
   if(ev.target && ev.target.id==='vehPhoto'){
-    const f = ev.target.files && ev.target.files[0]; if(!f) return;
+    const f = ev.target.files?.[0]; if(!f) return;
     const full = await resizeToDataURL(f, 1280, .82);
-    $('vehPhotoThumb').innerHTML = `<img src="${full}" class="thumb" style="max-width:160px;border:1px solid #223447;border-radius:12px">`;
+    $('vehPhotoThumb').innerHTML =
+      `<img src="${full}" class="thumb" style="max-width:160px;border:1px solid #223447;border-radius:12px">`;
   }
 });
 
-/* Daños: listado + panel (sheet) */
-async function openDamageList(id){ currentVeh=id; await renderDamageList(); go('dmg'); }
+/* =========================================================
+ * Daños (listado + panel)
+ * =======================================================*/
+async function openDamageList(vehId){ currentVeh = vehId; await renderDamageList(); go('dmg'); }
+
 async function renderDamageList(){
   const list = $('dmgList'); list.innerHTML='';
   const damages = await db.listDamages(currentVeh);
+
   if(damages.length===0){
     const div = document.createElement('div');
-    div.className='empty'; div.innerHTML = `No hay daños registrados.<br><button class="btn primary" onclick="addDamage()">Agregar daño</button>`;
+    div.className='empty';
+    div.innerHTML = `No hay daños registrados.<br><button class="btn primary" onclick="addDamage()">Agregar daño</button>`;
     list.appendChild(div);
     return;
   }
+
   for(const d of damages){
     const img0 = Array.isArray(d.imgs) && d.imgs[0] ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0]) : '';
     const row = document.createElement('div'); row.className='item';
-    row.innerHTML = `<img src="${img0}" loading="lazy"><div><div class="title">${esc(d.parte||'')}</div><div class="meta">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div></div><div class="pill money">${money(d.cost||0)}</div>`;
+    row.innerHTML = `
+      <img src="${img0}" loading="lazy" alt="">
+      <div><div class="title">${esc(d.parte||'')}</div><div class="meta">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div></div>
+      <div class="pill money">${money(d.cost||0)}</div>`;
     row.onclick = ()=> openSheet(d);
     list.appendChild(row);
   }
 }
-function addDamage(){ const d={ id:`d_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, vehId: currentVeh, parte:'Parachoques delantero', ubic:'', sev:'Bajo', descrption:'', cost:0, imgs:[] }; openSheet(d, true); }
 
-/* Sheet (detalle) */
+function addDamage(){
+  const d = {
+    id:`d_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    veh_id: currentVeh,             // <— SIEMPRE snake_case
+    parte:'Parachoques delantero',
+    ubic:'', sev:'Bajo',
+    descrption:'',                  // <— coincide con DB
+    cost:0, imgs:[]
+  };
+  openSheet(d, true);
+}
+
+/* --- Sheet (detalle) --- */
 function openSheet(damage, isNew=false){
   currentDamage = { ...damage, isNew };
-  const sel = $('d_parte'); sel.innerHTML = partsList.map(p=>`<option>${p}</option>`).join(''); sel.value = damage.parte || 'Parachoques delantero';
-  $('d_ubic').value = damage.ubic || '';
-  $('d_sev').value = damage.sev || 'Bajo';
+
+  const sel = $('d_parte');
+  sel.innerHTML = partsList.map(p=>`<option>${p}</option>`).join('');
+  $('d_parte').value = damage.parte || 'Parachoques delantero';
+  $('d_ubic').value  = damage.ubic || '';
+  $('d_sev').value   = damage.sev || 'Bajo';
   $('d_descr').value = damage.descrption || '';
-  $('d_cost').value = damage.cost || 0;
+  $('d_cost').value  = damage.cost || 0;
+
   const thumbs = $('d_thumbs'); thumbs.innerHTML='';
-  (damage.imgs||[]).forEach(img=>{ const src=img.thumb||img.full||img; const im=new Image(); im.src=src; im.style.cssText='width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid #223447'; thumbs.appendChild(im); });
+  (damage.imgs||[]).forEach(img=>{
+    const src = img.thumb || img.full || img;
+    const im = new Image();
+    im.src = src;
+    im.style.cssText='width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid #223447';
+    thumbs.appendChild(im);
+  });
+
   $('d_fotos').value = '';
   $('dmgDelete').style.display = isNew ? 'none' : 'inline-block';
   $('dmgSheet').classList.add('open');
 }
+
 function closeSheet(){ $('dmgSheet').classList.remove('open'); currentDamage=null; }
 
-/* Añadir fotos al daño → genera thumb+full */
+/* Fotos del daño → thumb+full */
 $('d_fotos').addEventListener('change', async ()=>{
   if(!currentDamage) return;
   const files = Array.from($('d_fotos').files||[]);
   for(const f of files){
-    const full = await resizeToDataURL(f, 1280, .82);
-    const thumb = await resizeToDataURL(f, 320, .8);
+    const full  = await resizeToDataURL(f,1280,.82);
+    const thumb = await resizeToDataURL(f, 320,.80);
     (currentDamage.imgs = currentDamage.imgs || []).push({thumb, full});
-    const im = new Image(); im.src = thumb; im.style.cssText='width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid #223447'; $('d_thumbs').appendChild(im);
+    const im = new Image(); im.src = thumb;
+    im.style.cssText='width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid #223447';
+    $('d_thumbs').appendChild(im);
   }
 });
 
 /* Guardar / eliminar daño */
 $('dmgSave').addEventListener('click', async ()=>{
   if(!currentDamage) return;
-  currentDamage.parte = $('d_parte').value;
-  currentDamage.ubic = $('d_ubic').value;
-  currentDamage.sev = $('d_sev').value;
-  currentDamage.descrption = $('d_descr').value;
-  currentDamage.cost = Number($('d_cost').value||0);
-  await db.saveDamage(currentDamage);
+  const payload = {
+    id: currentDamage.id,
+    veh_id: currentDamage.veh_id || currentVeh,  // <— garantiza relación
+    parte: $('d_parte').value,
+    ubic: $('d_ubic').value,
+    sev: $('d_sev').value,
+    descrption: $('d_descr').value,
+    cost: Number($('d_cost').value || 0),
+    imgs: currentDamage.imgs || []
+  };
+  await db.saveDamage(payload);
   closeSheet(); renderDamageList();
 });
 $('dmgDelete').addEventListener('click', async ()=>{
@@ -142,57 +297,86 @@ $('dmgDelete').addEventListener('click', async ()=>{
   if(confirm('¿Eliminar daño?')){ await db.deleteDamage(currentDamage.id); closeSheet(); renderDamageList(); }
 });
 
-/* Reporte */
-function sevGlobal(list){ if(!list||list.length===0) return 'BAJO'; const arr=list.map(d=>({Bajo:1,Medio:2,Alto:3}[d.sev]||1)); const avg=arr.reduce((a,b)=>a+b,0)/arr.length; return avg<=1.5?'BAJO':(avg<=2.3?'MEDIO':'ALTO'); }
-async function openReport(id){
-  currentVeh=id;
-  const v=await db.getVehicle(id)||{}, ds=await db.listDamages(id)||[];
-  $('p_vehId').textContent=v.veh_id||'—'; $('p_fecha').textContent=(v.fecha||'—').toString().slice(0,10);
-  $('p_vin').textContent=v.vin||'—'; $('p_marca').textContent=v.marca||'—'; $('p_modelo').textContent=v.modelo||'—'; $('p_anio').textContent=v.anio||'—';
-  $('p_color').textContent=v.color||'—'; $('p_pais').textContent=v.pais||'—'; $('p_notas').textContent=v.notas||'—';
-  $('p_total').textContent = money(ds.reduce((s,d)=>s+Number(d.cost||0),0));
+/* =========================================================
+ * Reporte
+ * =======================================================*/
+function sevGlobal(list){
+  if(!list||list.length===0) return 'BAJO';
+  const arr = list.map(d=>({Bajo:1,Medio:2,Alto:3}[d.sev]||1));
+  const avg = arr.reduce((a,b)=>a+b,0)/arr.length;
+  return avg<=1.5?'BAJO':(avg<=2.3?'MEDIO':'ALTO');
+}
+
+async function openReport(vehId){
+  currentVeh = vehId;
+  const v  = await db.getVehicle(vehId) || {};
+  const ds = await db.listDamages(vehId) || [];
+
+  $('p_vehId').textContent = v.veh_id || '—';
+  $('p_fecha').textContent = (v.fecha || '—').toString().slice(0,10);
+  $('p_vin').textContent   = v.vin || '—';
+  $('p_marca').textContent = v.marca || '—';
+  $('p_modelo').textContent= v.modelo || '—';
+  $('p_anio').textContent  = v.anio || '—';
+  $('p_color').textContent = v.color || '—';
+  $('p_pais').textContent  = v.pais || '—';
+  $('p_notas').textContent = v.notas || '—';
+
+  $('p_total').textContent     = money(ds.reduce((s,d)=> s + Number(d.cost||0), 0));
   $('p_sevGlobal').textContent = sevGlobal(ds);
-  $('p_listado').innerHTML = ds.map((d,i)=>`<div class="card" style="padding:10px;margin:10px 0">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <strong>${i+1}. ${esc(d.parte||'')}</strong>
-      <span class="pill">${esc(d.sev||'')}</span>
-      <span class="pill money">${money(d.cost||0)}</span>
+
+  $('p_listado').innerHTML = ds.map((d,i)=>`
+    <div class="card" style="padding:10px;margin:10px 0">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <strong>${i+1}. ${esc(d.parte||'')}</strong>
+        <span class="pill">${esc(d.sev||'')}</span>
+        <span class="pill money">${money(d.cost||0)}</span>
+      </div>
+      <div class="sub">${esc(d.ubic||'')}</div>
+      <div style="margin-top:6px">${esc(d.descrption||'')}</div>
     </div>
-    <div class="sub">${esc(d.ubic||'')}</div>
-    <div style="margin-top:6px">${esc(d.descrption||'')}</div>
-  </div>`).join('');
+  `).join('');
   go('report');
 }
-function exportPDF(){ const name=`LYN-${($('p_vehId').textContent||'ID')}-${($('p_fecha').textContent||today())}.pdf`; const prev=document.title; document.title=name; window.print(); setTimeout(()=>document.title=prev, 800); }
 
-/* VIN extendido (no pisa campos ya llenos) */
-async function decodeVIN(){
+function exportPDF(){
+  const name = `LYN-${($('p_vehId').textContent||'ID')}-${($('p_fecha').textContent||today())}.pdf`;
+  const prev = document.title;
+  document.title = name;
+  window.print();
+  setTimeout(()=> document.title = prev, 800);
+}
+
+/* =========================================================
+ * VIN (decode + auto-guardar opcional)
+ * =======================================================*/
+async function decodeVIN({ autoSave=true } = {}){
   const vin = $('vin').value.trim().toUpperCase();
   if(vin.length!==17){ alert('El VIN debe tener 17 caracteres.'); return; }
   try{
     const url=`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVINValuesExtended/${encodeURIComponent(vin)}?format=json`;
     const res=await fetch(url); const data=await res.json(); const r=data?.Results?.[0]||{};
-    if(!$('marca').value) $('marca').value = r.Make || r.Manufacturer || '';
+
+    if(!$('marca').value)  $('marca').value  = r.Make || r.Manufacturer || '';
     if(!$('modelo').value) $('modelo').value = r.Model || '';
-    if(!$('anio').value) $('anio').value = r.ModelYear || '';
-    if(!$('pais').value) $('pais').value = r.PlantCountry || r.PlantCity || '';
-  }catch{ alert('No se pudo decodificar el VIN.'); }
+    if(!$('anio').value)   $('anio').value   = r.ModelYear || '';
+    if(!$('pais').value)   $('pais').value   = r.PlantCountry || r.PlantCity || '';
+
+    // Auto-guardar si ya hay veh_id
+    if(autoSave && $('vehId').value.trim()){
+      await saveVehicle();
+      alert('Datos del VIN aplicados y guardados.');
+    }
+  }catch{
+    alert('No se pudo decodificar el VIN.');
+  }
 }
 
-/* Init */
-document.addEventListener('DOMContentLoaded', ()=>{ $('fecha').value=today(); renderHome(); });
+/* =========================================================
+ * Init
+ * =======================================================*/
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('fecha').value = today();
+  renderHome();
+});
 $('addDamage').addEventListener('click', ()=> addDamage());
-
-/* Util: resize con canvas */
-function resizeToDataURL(file, maxW=1280, quality=.82){
-  return new Promise((resolve,reject)=>{
-    const img=new Image(), fr=new FileReader();
-    fr.onload=()=>img.src=fr.result; fr.onerror=reject;
-    img.onload=()=>{
-      const scale=Math.min(1, maxW/img.width), w=Math.round(img.width*scale), h=Math.round(img.height*scale);
-      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(c.toDataURL('image/jpeg',quality));
-    };
-    fr.readAsDataURL(file);
-  });
-}

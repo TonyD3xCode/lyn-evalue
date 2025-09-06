@@ -1,4 +1,3 @@
-
 import { getClient, jsonResponse, preflight } from './db.mjs';
 
 export const handler = async (event) => {
@@ -8,28 +7,64 @@ export const handler = async (event) => {
   const client = getClient();
   await client.connect();
   try {
+    // -------- GET: lista por vehículo --------
     if (event.httpMethod === 'GET') {
-      const vehId = event.queryStringParameters?.vehId;
+      const qs = event.queryStringParameters || {};
+      const vehId = qs.vehId || qs.veh_id;
       if (!vehId) return jsonResponse(400, { error: 'vehId required' });
-      const { rows } = await client.query('select * from damages where veh_id=$1 order by updated_at desc', [vehId]);
+
+      const { rows } = await client.query(
+        'SELECT * FROM damages WHERE veh_id=$1 ORDER BY updated_at DESC',
+        [vehId]
+      );
       return jsonResponse(200, rows);
     }
+
+    // -------- POST: upsert de daño --------
     if (event.httpMethod === 'POST') {
-      const d = JSON.parse(event.body || '{}');
-      await client.query(`
-        insert into damages (id, veh_id, parte, ubic, sev, descrption, cost, imgs, updated_at)
-        values ($1,$2,$3,$4,$5,$6,$7,$8, now())
-        on conflict (id) do update set
-          parte=excluded.parte, ubic=excluded.ubic, sev=excluded.sev, descrption=excluded.descrption,
-          cost=excluded.cost, imgs=excluded.imgs, updated_at=now()
-      `, [d.id, d.vehId, d.parte, d.ubic, d.sev, d.descrption, d.cost, JSON.stringify(d.imgs || [])]);
+      const body = JSON.parse(event.body || '{}');
+
+      // Normaliza nombres: acepta vehId o veh_id
+      const d = {
+        id: body.id,
+        veh_id: body.veh_id || body.vehId,          // <—
+        parte: body.parte,
+        ubic: body.ubic,
+        sev: body.sev,
+        descrption: body.descrption,                // (tal cual en tu esquema)
+        cost: body.cost || 0,
+        imgs: body.imgs || []
+      };
+      if (!d.id || !d.veh_id) {
+        return jsonResponse(400, { error: 'id and veh_id required' });
+      }
+
+      await client.query(
+        `
+        INSERT INTO damages (id, veh_id, parte, ubic, sev, descrption, cost, imgs, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now())
+        ON CONFLICT (id) DO UPDATE SET
+          parte=EXCLUDED.parte,
+          ubic=EXCLUDED.ubic,
+          sev=EXCLUDED.sev,
+          descrption=EXCLUDED.descrption,
+          cost=EXCLUDED.cost,
+          imgs=EXCLUDED.imgs,
+          updated_at=now()
+        `,
+        [d.id, d.veh_id, d.parte, d.ubic, d.sev, d.descrption, d.cost, JSON.stringify(d.imgs)]
+      );
       return jsonResponse(200, { ok: true });
     }
+
+    // -------- DELETE --------
     if (event.httpMethod === 'DELETE') {
       const { id } = JSON.parse(event.body || '{}');
-      await client.query('delete from damages where id=$1', [id]);
+      if (!id) return jsonResponse(400, { error: 'id required' });
+      await client.query('DELETE FROM damages WHERE id=$1', [id]);
       return jsonResponse(200, { ok: true });
     }
+
     return jsonResponse(405, { error: 'Method not allowed' });
   } catch (e) {
     console.error(e);
