@@ -1,36 +1,41 @@
+import pg from "pg";
+const { Pool } = pg;
 
-import { Client } from 'pg';
-
-export function getClient() {
-  const url = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
-  if (!url) throw new Error('Missing NEON_DATABASE_URL');
-  const client = new Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
-  return client;
+let pool;
+export function getPool(){
+  if(!pool){
+    const conn = process.env.NEON_DATABASE_URL;
+    if(!conn) throw new Error("NEON_DATABASE_URL missing");
+    pool = new Pool({
+      connectionString: conn,
+      ssl: { rejectUnauthorized: false },
+      max: 4,
+      idleTimeoutMillis: 30000
+    });
+  }
+  return pool;
 }
 
-export function jsonResponse(status, body) {
-  return {
-    statusCode: status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    },
-    body: JSON.stringify(body)
-  };
-}
+export const json = (code, data) => ({
+  statusCode: code,
+  headers: {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+  },
+  body: JSON.stringify(data)
+});
 
-export function preflight(event) {
-  if (event.httpMethod === 'OPTIONS') {
+export const preflight = (event) => {
+  if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      },
+      body: ""
     };
   }
   return null;
-}
+};
