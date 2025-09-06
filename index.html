@@ -1,133 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>LYN AutoSales — Evaluador</title>
-  <link rel="preload" href="/style.css?v=3" as="style">
-  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="apple-touch-icon" href="/assets/logo-lyn.png">
+  <!-- CSS mínimo de respaldo -->
+  <style>
+    body {background:#0b0f14;color:#e9f1f7;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .view{display:none}.view.active{display:block}
+  </style>
+  <!-- CSS externo con cache-buster -->
+  <link rel="preload" href="/style.css?v=11" as="style">
+  <link rel="stylesheet" href="/style.css?v=11">
 </head>
 <body>
-  <div class="header">
-    <img class="logo" src="assets/logo-lyn.png" alt="LYN AutoSales">
-    <div class="title">LYN AutoSales — Evaluador</div>
-    <div class="sub">Tony Dev</div>
-  </div>
+  <header class="topbar">
+    <img src="/assets/logo-lyn.png" alt="LYN AutoSales" class="logo">
+    <div class="brand">LYN AutoSales — Evaluador <span class="sub">Neon • VIN • PDF</span></div>
+  </header>
 
-  <!-- HOME -->
-  <section id="v-home" class="view active">
-    <div class="container">
+  <main>
+    <!-- Home -->
+    <section id="v-home" class="view active">
       <div id="empty" class="empty">
-        <div style="font-weight:800">Aún no hay vehículos</div>
-        <div class="sub">Toca “+ Nuevo” para crear el primero.</div>
+        Aún no hay vehículos<br><small>Toca “+ Nuevo” para crear el primero.</small>
       </div>
       <div id="veh-grid" class="grid"></div>
-    </div>
-  </section>
+    </section>
 
-  <!-- VEHICLE FORM -->
-  <section id="v-veh" class="view">
-    <div class="section-title">Ficha del vehículo</div>
-    <div class="panel">
-      <div class="row3">
-        <div><label>Vehículo ID</label><input id="vehId" type="text" placeholder="LYNA-0001"></div>
-        <div><label>Fecha</label><input id="fecha" type="text" placeholder="YYYY-MM-DD"></div>
-        <div><label>VIN (17)</label><input id="vin" type="text" maxlength="17"></div>
+    <!-- Vehículo -->
+    <section id="v-veh" class="view">
+      <h3>Ficha del vehículo</h3>
+      <div class="form grid2">
+        <label>Vehículo ID<input id="vehId" placeholder="LYNA-0001"></label>
+        <label>Fecha<input id="fecha" type="date"></label>
+        <label>VIN (17)<input id="vin" maxlength="17" placeholder="1HG..."></label>
+        <label>Marca<input id="marca"></label>
+        <label>Modelo<input id="modelo"></label>
+        <label>Año<input id="anio"></label>
+        <label>Color<input id="color"></label>
+        <label>País<input id="pais"></label>
+        <label class="file">Foto del vehículo
+          <input id="vehPhoto" type="file" accept="image/*" capture="environment">
+        </label>
+        <div id="vehPhotoThumb"></div>
+        <label class="notes">Notas<textarea id="notas"></textarea></label>
       </div>
-      <div class="row3">
-        <div><label>Marca</label><input id="marca" type="text"></div>
-        <div><label>Modelo</label><input id="modelo" type="text"></div>
-        <div><label>Año</label><input id="anio" type="text"></div>
-      </div>
-      <div class="row3">
-        <div><label>Color</label><input id="color" type="text"></div>
-        <div><label>País</label><input id="pais" type="text"></div>
-        <div><label>Foto del vehículo</label><input id="vehPhoto" type="file" accept="image/*" capture="environment"><div id="vehPhotoThumb"></div></div>
-      </div>
-      <div><label>Notas</label><textarea id="notas"></textarea></div>
       <div class="row">
         <button class="btn" onclick="go('home')">← Inicio</button>
-        <div></div>
         <button class="btn" onclick="decodeVIN()">Decodificar VIN</button>
         <button class="btn primary" onclick="saveVehicle()">Guardar</button>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- DAMAGES LIST -->
-  <section id="v-dmg" class="view">
-    <div class="section-title">Daños del vehículo</div>
-    <div class="panel">
+    <!-- Daños -->
+    <section id="v-dmg" class="view">
+      <h3>Daños del vehículo</h3>
+      <div id="dmgList" class="list"></div>
+      <div class="row"><button id="addDamage" class="btn primary">+ Nuevo</button></div>
+    </section>
+
+    <!-- Reporte -->
+    <section id="v-report" class="view">
+      <h3>Reporte</h3>
+      <div class="card">
+        <div><b>ID:</b> <span id="p_vehId">—</span></div>
+        <div><b>Fecha:</b> <span id="p_fecha">—</span></div>
+        <div><b>VIN:</b> <span id="p_vin">—</span></div>
+        <div><b>Marca:</b> <span id="p_marca">—</span> &nbsp; 
+             <b>Modelo:</b> <span id="p_modelo">—</span> &nbsp; 
+             <b>Año:</b> <span id="p_anio">—</span></div>
+        <div><b>Color:</b> <span id="p_color">—</span> &nbsp; 
+             <b>País:</b> <span id="p_pais">—</span></div>
+        <div><b>Notas:</b> <span id="p_notas">—</span></div>
+        <div class="row">
+          <span class="pill">Severidad: <b id="p_sevGlobal">—</b></span>
+          <span class="pill money" id="p_total">$0</span>
+        </div>
+      </div>
+      <div id="p_listado"></div>
       <div class="row">
         <button class="btn" onclick="go('home')">← Inicio</button>
-        <div></div>
-        <button class="btn primary" id="addDamage">Agregar daño</button>
-      </div>
-      <div id="dmgList" class="dmg-list"></div>
-    </div>
-  </section>
-
-  <!-- DAMAGE SHEET (detalle) -->
-  <aside id="dmgSheet" class="sheet" aria-hidden="true">
-    <div class="head">
-      <strong>Detalle de daño</strong>
-      <div style="display:flex;gap:8px">
-        <button class="btn danger" id="dmgDelete">Eliminar</button>
-        <button class="btn primary" id="dmgSave">Guardar</button>
-        <button class="btn" onclick="closeSheet()">✕</button>
-      </div>
-    </div>
-    <div class="content">
-      <div class="row3">
-        <div><label>Parte</label><select id="d_parte"></select></div>
-        <div><label>Ubicación</label><input id="d_ubic" type="text" placeholder="Esquina, zona, etc."></div>
-        <div><label>Severidad</label><select id="d_sev"><option>Bajo</option><option>Medio</option><option>Alto</option></select></div>
-      </div>
-      <div class="row3">
-        <div style="grid-column:1/3"><label>Descripción</label><textarea id="d_descr"></textarea></div>
-        <div><label>Costo (USD)</label><input id="d_cost" type="number" min="0" step="1" value="0"></div>
-      </div>
-      <div style="margin-top:10px">
-        <label>Fotos (se guardan thumb+full)</label>
-        <input id="d_fotos" type="file" multiple accept="image/*" capture="environment">
-        <div id="d_thumbs" class="thumbs"></div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- REPORT -->
-  <section id="v-report" class="view">
-    <div class="panel">
-      <h2>Reporte — LYN AutoSales</h2>
-      <div class="row3">
-        <div><label>Vehículo ID</label><div id="p_vehId" class="pill">—</div></div>
-        <div><label>Fecha</label><div id="p_fecha" class="pill">—</div></div>
-        <div><label>VIN</label><div id="p_vin" class="pill">—</div></div>
-      </div>
-      <div class="row3">
-        <div><label>Marca</label><div id="p_marca">—</div></div>
-        <div><label>Modelo</label><div id="p_modelo">—</div></div>
-        <div><label>Año</label><div id="p_anio">—</div></div>
-      </div>
-      <div class="row3">
-        <div><label>Color</label><div id="p_color">—</div></div>
-        <div><label>País</label><div id="p_pais">—</div></div>
-        <div><label>Notas</label><div id="p_notas">—</div></div>
-      </div>
-      <div class="row">
-        <div><label>Severidad global</label><div id="p_sevGlobal" class="pill">BAJO</div></div>
-        <div><label>Total estimado</label><div id="p_total" class="pill money">$0</div></div>
-      </div>
-      <div id="p_listado" style="margin-top:10px"></div>
-      <div class="row" style="margin-top:12px">
-        <button class="btn" onclick="go('dmg')">← Daños</button>
-        <div></div>
         <button class="btn primary" onclick="exportPDF()">Exportar PDF</button>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- Panel de daño -->
+    <aside id="dmgSheet" class="sheet">
+      <div class="sheet-card">
+        <div class="sheet-head">
+          Detalle de daño <button class="btn" onclick="closeSheet()">×</button>
+        </div>
+        <div class="grid2">
+          <label>Parte<select id="d_parte"></select></label>
+          <label>Ubicación<input id="d_ubic" placeholder="Esquina, zona, etc."></label>
+          <label>Severidad<select id="d_sev"><option>Bajo</option><option>Medio</option><option>Alto</option></select></label>
+          <label>Descripción<textarea id="d_descr"></textarea></label>
+          <label>Costo (USD)<input id="d_cost" type="number" min="0" step="1" value="0"></label>
+          <label class="file">Fotos (thumb+full)
+            <input id="d_fotos" type="file" accept="image/*" multiple>
+          </label>
+          <div id="d_thumbs" class="thumbs"></div>
+        </div>
+        <div class="row">
+          <button id="dmgDelete" class="btn danger">Eliminar</button>
+          <button id="dmgSave" class="btn primary">Guardar</button>
+        </div>
+      </div>
+    </aside>
+  </main>
 
   <button class="fab" onclick="newVehicle()">+ Nuevo</button>
-  <script defer src="/app.js?v=3"></script>
+  <script defer src="/app.js?v=11"></script>
 </body>
 </html>
