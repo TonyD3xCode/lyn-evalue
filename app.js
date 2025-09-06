@@ -224,12 +224,14 @@ async function renderDamageList(){
 
 function addDamage(){
   const d = {
-    id:`d_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-    veh_id: currentVeh,             // <— SIEMPRE snake_case
-    parte:'Parachoques delantero',
-    ubic:'', sev:'Bajo',
-    descrption:'',                  // <— coincide con DB
-    cost:0, imgs:[]
+    id: `d_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    veh_id: currentVeh,            // <-- aquí
+    parte: 'Parachoques delantero',
+    ubic: '',
+    sev: 'Bajo',
+    descrption: '',
+    cost: 0,
+    imgs: []
   };
   openSheet(d, true);
 }
@@ -281,7 +283,7 @@ $('dmgSave').addEventListener('click', async ()=>{
   if(!currentDamage) return;
   const payload = {
     id: currentDamage.id,
-    veh_id: currentDamage.veh_id || currentVeh,  // <— garantiza relación
+    veh_id: currentDamage.veh_id || currentVeh,  // <-- aquí
     parte: $('d_parte').value,
     ubic: $('d_ubic').value,
     sev: $('d_sev').value,
