@@ -1,5 +1,4 @@
 [build]
-  # Static: no necesitas build command
   command = ""
   publish = "."
 
@@ -16,7 +15,7 @@
     Access-Control-Allow-Methods = "GET,POST,DELETE,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type"
 
-# (Opcional) fuerza no cachear CSS/JS si Safari guarda versión vieja
+# Evitar caché agresiva de CSS/JS en Safari
 [[headers]]
   for = "/*.css"
   [headers.values]
