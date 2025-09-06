@@ -135,8 +135,11 @@ async function renderHome(){
  * Navegación + CRUD Vehículo
  * =======================================================*/
 function go(view){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('v-'+view).classList.add('active');
+  // Mostrar el FAB solo en Home (crea vehículos)
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = (view === 'home') ? 'block' : 'none';
   window.scrollTo(0,0);
 }
 
