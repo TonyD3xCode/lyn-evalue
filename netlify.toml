@@ -1,13 +1,28 @@
-
 [build]
+  # Static: no necesitas build command
+  command = ""
   publish = "."
-  functions = "netlify/functions"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
-  external_node_modules = ["pg","@netlify/blobs"]
+  external_node_modules = ["pg"]
+
+# CORS para funciones
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET,POST,DELETE,OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+
+# (Opcional) fuerza no cachear CSS/JS si Safari guarda versión vieja
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
-  for = "/*"
+  for = "/*.js"
   [headers.values]
-    Cache-Control = "no-store"
+    Cache-Control = "public, max-age=0, must-revalidate"
