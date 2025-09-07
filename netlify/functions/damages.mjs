@@ -6,8 +6,6 @@ export const handler = async (event) => {
 
   const pool = getPool();
   try {
-    // GET: lista por vehículo
-    // /.netlify/functions/damages?vehId=LYNA-0001  (también acepta veh_id)
     if (event.httpMethod === "GET") {
       const qs = event.queryStringParameters || {};
       const vehId = qs.veh_id || qs.vehId;
@@ -17,49 +15,44 @@ export const handler = async (event) => {
         "SELECT * FROM damages WHERE veh_id=$1 ORDER BY updated_at DESC",
         [vehId]
       );
-      return json(200, rows);
+
+      // Convierte imgs (JSONB) a objeto JS
+      const out = rows.map(r => ({
+        ...r,
+        imgs: Array.isArray(r.imgs) ? r.imgs : (typeof r.imgs === 'string' ? JSON.parse(r.imgs || '[]') : (r.imgs || []))
+      }));
+      return json(200, out);
     }
 
-    // POST: upsert de daño
     if (event.httpMethod === "POST") {
       const b = JSON.parse(event.body || "{}");
-
-      // Normaliza nombres (acepta veh_id o vehId)
       const d = {
         id: b.id,
         veh_id: b.veh_id || b.vehId,
         parte: b.parte || null,
         ubic: b.ubic || null,
         sev: b.sev || null,
-        descrption: b.descrption || null, // nombre tal cual está en tu DB
+        descrption: b.descrption || null,
         cost: b.cost || 0,
         imgs: Array.isArray(b.imgs) ? b.imgs : []
       };
-
-      if (!d.id || !d.veh_id) {
-        return json(400, { error: "id and veh_id required" });
-      }
+      if (!d.id || !d.veh_id) return json(400, { error: "id and veh_id required" });
 
       await pool.query(`
         INSERT INTO damages (id, veh_id, parte, ubic, sev, descrption, cost, imgs, updated_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now())
         ON CONFLICT (id) DO UPDATE SET
-          parte=EXCLUDED.parte,
-          ubic=EXCLUDED.ubic,
-          sev=EXCLUDED.sev,
-          descrption=EXCLUDED.descrption,
-          cost=EXCLUDED.cost,
-          imgs=EXCLUDED.imgs,
+          parte=EXCLUDED.parte, ubic=EXCLUDED.ubic, sev=EXCLUDED.sev,
+          descrption=EXCLUDED.descrption, cost=EXCLUDED.cost, imgs=EXCLUDED.imgs,
           updated_at=now()
       `, [
-        d.id, d.veh_id, d.parte, d.ubic, d.sev, d.descrption,
-        d.cost, JSON.stringify(d.imgs)
+        d.id, d.veh_id, d.parte, d.ubic, d.sev, d.descrption, d.cost,
+        JSON.stringify(d.imgs)      -- guarda como JSONB (texto → jsonb)
       ]);
 
       return json(200, { ok: true });
     }
 
-    // DELETE: por id de daño
     if (event.httpMethod === "DELETE") {
       const { id } = JSON.parse(event.body || "{}");
       if (!id) return json(400, { error: "id required" });
