@@ -6,24 +6,17 @@ export const handler = async (event) => {
 
   const pool = getPool();
   try {
-    // GET: lista completa o uno por veh_id
     if (event.httpMethod === "GET") {
       const qs = event.queryStringParameters || {};
       const id = qs.id;
       if (id) {
-        const { rows } = await pool.query(
-          "SELECT * FROM vehicles WHERE veh_id=$1",
-          [id]
-        );
+        const { rows } = await pool.query("SELECT * FROM vehicles WHERE veh_id=$1", [id]);
         return json(200, rows[0] || null);
       }
-      const { rows } = await pool.query(
-        "SELECT * FROM vehicles ORDER BY veh_id ASC"
-      );
+      const { rows } = await pool.query("SELECT * FROM vehicles ORDER BY veh_id ASC");
       return json(200, rows);
     }
 
-    // POST: UPSERT por veh_id
     if (event.httpMethod === "POST") {
       const b = JSON.parse(event.body || "{}");
       const v = {
@@ -45,26 +38,16 @@ export const handler = async (event) => {
           (veh_id, fecha, vin, marca, modelo, anio, color, pais, notas, foto_vehiculo)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         ON CONFLICT (veh_id) DO UPDATE SET
-          fecha=EXCLUDED.fecha,
-          vin=EXCLUDED.vin,
-          marca=EXCLUDED.marca,
-          modelo=EXCLUDED.modelo,
-          anio=EXCLUDED.anio,
-          color=EXCLUDED.color,
-          pais=EXCLUDED.pais,
-          notas=EXCLUDED.notas,
+          fecha=EXCLUDED.fecha, vin=EXCLUDED.vin, marca=EXCLUDED.marca, modelo=EXCLUDED.modelo,
+          anio=EXCLUDED.anio, color=EXCLUDED.color, pais=EXCLUDED.pais, notas=EXCLUDED.notas,
           foto_vehiculo=EXCLUDED.foto_vehiculo
         RETURNING *;
       `;
-      const vals = [
-        v.veh_id, v.fecha, v.vin, v.marca, v.modelo, v.anio,
-        v.color, v.pais, v.notas, v.foto_vehiculo
-      ];
+      const vals = [v.veh_id,v.fecha,v.vin,v.marca,v.modelo,v.anio,v.color,v.pais,v.notas,v.foto_vehiculo];
       const { rows } = await pool.query(sql, vals);
       return json(200, rows[0]);
     }
 
-    // DELETE: por veh_id
     if (event.httpMethod === "DELETE") {
       const { id } = JSON.parse(event.body || "{}");
       if (!id) return json(400, { error: "id required" });
