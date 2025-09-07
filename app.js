@@ -3,6 +3,9 @@
  * app.js (ordenado y con fixes de persistencia)
  * =======================================================*/
 
+/* Marca de script cargado (fallback en index.html) */
+window.__lyn_loaded = true;
+
 /* ---------- Config ---------- */
 const API = '/.netlify/functions';
 const VERSION = Date.now().toString();
@@ -30,6 +33,7 @@ const partsList = [
   'Marco frontal','Soporte radiador','Travesaño','Panel lateral izq.','Panel lateral der.'
 ];
 
+/* Límite de tamaño por imagen (para Neon y funciones Netlify) */
 const MAX_IMG_BYTES = 2.5 * 1024 * 1024; // 2.5 MB por imagen
 
 // Calcula tamaño aproximado de un dataURL base64 en bytes
@@ -38,7 +42,7 @@ function approxBytesFromDataURL(dataUrl){
   return Math.floor(b64.length * 3 / 4);
 }
 
-/* Resize imagen → DataURL (para guardar como base64 o URL externa) */
+/* Redimensiona imagen → DataURL (JPEG) */
 function resizeToDataURL(file, maxW=1280, quality=.82){
   return new Promise((resolve,reject)=>{
     const fr = new FileReader();
@@ -107,6 +111,8 @@ let currentDamage = null;  // objeto daño en edición
 async function renderHome(){
   const grid = $('veh-grid');
   const empty = $('empty');
+  if (!grid || !empty) return;
+
   grid.innerHTML = '';
 
   const vehicles = await db.listVehicles();
@@ -142,56 +148,69 @@ async function renderHome(){
 /* =========================================================
  * Navegación + CRUD Vehículo
  * =======================================================*/
+function toggleFab(show){
+  const fab = $('fabNew');
+  if (fab) fab.classList.toggle('hidden', !show);
+}
+
 function go(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('v-'+view).classList.add('active');
+  const target = document.getElementById('v-'+view);
+  if (target) target.classList.add('active');
 
-  // Mostrar FAB SOLO en Home
-  const fab = $('fabNew');
-  if (fab) fab.classList.toggle('hidden', view !== 'home');
+  // FAB solo en Home
+  toggleFab(view === 'home');
 
   window.scrollTo(0,0);
 }
 
 function newVehicle(){
   currentVeh = null;
-  $('vehId').value=''; $('fecha').value=today(); $('vin').value='';
-  $('marca').value=''; $('modelo').value=''; $('anio').value='';
-  $('color').value=''; $('pais').value=''; $('notas').value='';
-  $('vehPhoto').value=''; $('vehPhotoThumb').innerHTML='';
+  if ($('vehId'))   $('vehId').value='';
+  if ($('fecha'))   $('fecha').value=today();
+  if ($('vin'))     $('vin').value='';
+  if ($('marca'))   $('marca').value='';
+  if ($('modelo'))  $('modelo').value='';
+  if ($('anio'))    $('anio').value='';
+  if ($('color'))   $('color').value='';
+  if ($('pais'))    $('pais').value='';
+  if ($('notas'))   $('notas').value='';
+  if ($('vehPhoto')) $('vehPhoto').value='';
+  if ($('vehPhotoThumb')) $('vehPhotoThumb').innerHTML='';
   go('veh');
 }
 
 async function editVehicle(id){
   currentVeh = id;
   const v = await db.getVehicle(id) || {};
-  $('vehId').value  = v.veh_id || id;
-  $('fecha').value  = (v.fecha || today()).toString().slice(0,10);
-  $('vin').value    = v.vin || '';
-  $('marca').value  = v.marca || '';
-  $('modelo').value = v.modelo || '';
-  $('anio').value   = v.anio || '';
-  $('color').value  = v.color || '';
-  $('pais').value   = v.pais || '';
-  $('notas').value  = v.notas || '';
-  $('vehPhotoThumb').innerHTML = v.foto_vehiculo
-    ? `<img src="${v.foto_vehiculo}" class="thumb" style="max-width:160px;border:1px solid var(--border);border-radius:12px">`
-    : '';
+  if ($('vehId'))   $('vehId').value  = v.veh_id || id;
+  if ($('fecha'))   $('fecha').value  = (v.fecha || today()).toString().slice(0,10);
+  if ($('vin'))     $('vin').value    = v.vin || '';
+  if ($('marca'))   $('marca').value  = v.marca || '';
+  if ($('modelo'))  $('modelo').value = v.modelo || '';
+  if ($('anio'))    $('anio').value   = v.anio || '';
+  if ($('color'))   $('color').value  = v.color || '';
+  if ($('pais'))    $('pais').value   = v.pais || '';
+  if ($('notas'))   $('notas').value  = v.notas || '';
+  if ($('vehPhotoThumb')) {
+    $('vehPhotoThumb').innerHTML = v.foto_vehiculo
+      ? `<img src="${v.foto_vehiculo}" class="thumb" style="max-width:160px;border:1px solid var(--border);border-radius:12px">`
+      : '';
+  }
   go('veh');
 }
 
 async function saveVehicle(){
-  /* Guardar SIEMPRE en snake_case (coincide con BD y funciones) */
   const payload = {
-    veh_id:        $('vehId').value.trim(),
-    fecha:         ($('fecha').value || today()).slice(0,10),
-    vin:           $('vin').value.trim().toUpperCase(),
-    marca:         $('marca').value.trim(),
-    modelo:        $('modelo').value.trim(),
-    anio:          $('anio').value.trim(),
-    color:         $('color').value.trim(),
-    pais:          $('pais').value.trim(),
-    notas:         $('notas').value.trim(),
+    veh_id:        $('vehId')?.value.trim(),
+    fecha:         ( ($('fecha')?.value) || today()).slice(0,10),
+    vin:           $('vin')?.value.trim().toUpperCase(),
+    marca:         $('marca')?.value.trim(),
+    modelo:        $('modelo')?.value.trim(),
+    anio:          $('anio')?.value.trim(),
+    color:         $('color')?.value.trim(),
+    pais:          $('pais')?.value.trim(),
+    notas:         $('notas')?.value.trim(),
     foto_vehiculo: document.querySelector('#vehPhotoThumb img')?.src || null
   };
 
@@ -217,8 +236,14 @@ document.addEventListener('change', async (ev)=>{
     const f = ev.target.files?.[0];
     if(!f) return;
     const full = await resizeToDataURL(f, 1280, .82);
-    $('vehPhotoThumb').innerHTML =
-      `<img src="${full}" class="thumb" style="max-width:160px;border:1px solid var(--border);border-radius:12px">`;
+    if (approxBytesFromDataURL(full) > MAX_IMG_BYTES) {
+      alert('La foto principal es demasiado pesada.');
+      return;
+    }
+    if ($('vehPhotoThumb')) {
+      $('vehPhotoThumb').innerHTML =
+        `<img src="${full}" class="thumb" style="max-width:160px;border:1px solid var(--border);border-radius:12px">`;
+    }
   }
 });
 
@@ -233,6 +258,8 @@ async function openDamageList(vehId){
 
 async function renderDamageList(){
   const list = $('dmgList');
+  if (!list) return;
+
   list.innerHTML = '';
   const damages = await db.listDamages(currentVeh);
 
@@ -264,7 +291,7 @@ async function renderDamageList(){
 function addDamage(){
   const d = {
     id: `d_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-    veh_id: currentVeh,         // <-- guardamos veh_id (no vehId)
+    veh_id: currentVeh,         // guardamos veh_id (no vehId)
     parte: 'Parachoques delantero',
     ubic: '',
     sev: 'Bajo',
@@ -275,15 +302,17 @@ function addDamage(){
   openSheet(d, true);
 }
 
+/* Validación simple para habilitar Guardar */
 function validateDamageForm(){
-  return $('d_parte').value && $('d_sev').value && $('d_cost').value !== '';
+  return $('d_parte')?.value && $('d_sev')?.value && $('d_cost')?.value !== '';
 }
-$('d_parte').addEventListener('change', toggleSave);
-$('d_sev').addEventListener('change', toggleSave);
-$('d_cost').addEventListener('input', toggleSave);
 function toggleSave(){
-  $('dmgSave').disabled = !validateDamageForm();
+  const b = $('dmgSave');
+  if (b) b.disabled = !validateDamageForm();
 }
+$('d_parte')?.addEventListener('change', toggleSave);
+$('d_sev')?.addEventListener('change', toggleSave);
+$('d_cost')?.addEventListener('input', toggleSave);
 
 /* ---------- Panel (sheet) ---------- */
 function openSheet(damage, isNew=false){
@@ -291,58 +320,64 @@ function openSheet(damage, isNew=false){
 
   /* lista de partes */
   const sel = $('d_parte');
-  sel.innerHTML = partsList.map(p=>`<option>${p}</option>`).join('');
-  $('d_parte').value = damage.parte || 'Parachoques delantero';
+  if (sel) {
+    sel.innerHTML = partsList.map(p=>`<option>${p}</option>`).join('');
+    $('d_parte').value = damage.parte || 'Parachoques delantero';
+  }
 
-  $('d_ubic').value  = damage.ubic || '';
-  $('d_sev').value   = damage.sev || 'Bajo';
-  $('d_descr').value = damage.descrption || '';
-  $('d_cost').value  = damage.cost || 0;
+  if ($('d_ubic'))  $('d_ubic').value  = damage.ubic || '';
+  if ($('d_sev'))   $('d_sev').value   = damage.sev || 'Bajo';
+  if ($('d_descr')) $('d_descr').value = damage.descrption || '';
+  if ($('d_cost'))  $('d_cost').value  = damage.cost || 0;
 
   /* miniaturas */
   const thumbs = $('d_thumbs');
-  thumbs.innerHTML = '';
-  (damage.imgs||[]).forEach(img=>{
-    const src = img.thumb || img.full || img;
-    const im = new Image();
-    im.src = src;
-    im.style.cssText = 'width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--border)';
-    thumbs.appendChild(im);
-  });
+  if (thumbs) {
+    thumbs.innerHTML = '';
+    (damage.imgs||[]).forEach(img=>{
+      const src = img.thumb || img.full || img;
+      const im = new Image();
+      im.src = src;
+      im.style.cssText = 'width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--border)';
+      thumbs.appendChild(im);
+    });
+  }
 
-  $('d_fotos').value = '';
-  $('dmgDelete').style.display = isNew ? 'none' : 'inline-block';
-  $('dmgSheet').classList.add('open');
+  if ($('d_fotos')) $('d_fotos').value = '';
+  if ($('dmgDelete')) $('dmgDelete').style.display = isNew ? 'none' : 'inline-block';
+  if ($('dmgSheet'))  $('dmgSheet').classList.add('open');
+
+  toggleSave();
 }
 
 function closeSheet(){
-  $('dmgSheet').classList.remove('open');
+  if ($('dmgSheet')) $('dmgSheet').classList.remove('open');
   currentDamage = null;
 }
 
 /* Adjuntar fotos (se guardan thumb + full) */
-$('d_fotos').addEventListener('change', async ()=>{
+$('d_fotos')?.addEventListener('change', async ()=>{
   if(!currentDamage) return;
   const files = Array.from($('d_fotos').files || []);
   for(const f of files){
-  const full  = await resizeToDataURL(f, 1280, .80);
-  const thumb = await resizeToDataURL(f,  320, .80);
+    const full  = await resizeToDataURL(f, 1280, .80);
+    const thumb = await resizeToDataURL(f,  320, .80);
 
-if (approxBytesFromDataURL(full) > MAX_IMG_BYTES) {
-  alert('La foto es muy grande incluso tras comprimir. Intenta otra más liviana.');
-  return;
-}
+    if (approxBytesFromDataURL(full) > MAX_IMG_BYTES) {
+      alert('La foto es muy grande incluso tras comprimir. Intenta otra más liviana.');
+      return;
+    }
 
-(currentDamage.imgs = currentDamage.imgs || []).push({ thumb, full });
+    (currentDamage.imgs = currentDamage.imgs || []).push({ thumb, full });
     const im = new Image();
     im.src = thumb;
     im.style.cssText = 'width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--border)';
-    $('d_thumbs').appendChild(im);
+    $('d_thumbs')?.appendChild(im);
   }
 });
 
 /* Guardar / eliminar un daño */
-$('dmgSave').addEventListener('click', async (ev)=>{
+$('dmgSave')?.addEventListener('click', async (ev)=>{
   if(!currentDamage) return;
   const btn = ev.currentTarget;
   if (btn.disabled) return;        // evita doble disparo
@@ -352,11 +387,11 @@ $('dmgSave').addEventListener('click', async (ev)=>{
     const payload = {
       id: currentDamage.id,
       veh_id: currentDamage.veh_id || currentVeh,
-      parte: $('d_parte').value,
-      ubic: $('d_ubic').value,
-      sev: $('d_sev').value,
-      descrption: $('d_descr').value,
-      cost: Number($('d_cost').value || 0),
+      parte: $('d_parte')?.value,
+      ubic: $('d_ubic')?.value,
+      sev: $('d_sev')?.value,
+      descrption: $('d_descr')?.value,
+      cost: Number($('d_cost')?.value || 0),
       imgs: currentDamage.imgs || []
     };
     await db.saveDamage(payload);
@@ -367,12 +402,7 @@ $('dmgSave').addEventListener('click', async (ev)=>{
   }
 });
 
-  await db.saveDamage(payload);
-  closeSheet();
-  renderDamageList();
-});
-
-$('dmgDelete').addEventListener('click', async ()=>{
+$('dmgDelete')?.addEventListener('click', async ()=>{
   if(!currentDamage) return;
   if(confirm('¿Eliminar daño?')){
     await db.deleteDamage(currentDamage.id);
@@ -396,36 +426,38 @@ async function openReport(vehId){
   const v  = await db.getVehicle(vehId) || {};
   const ds = await db.listDamages(vehId) || [];
 
-  $('p_vehId').textContent = v.veh_id || '—';
-  $('p_fecha').textContent = (v.fecha || '—').toString().slice(0,10);
-  $('p_vin').textContent   = v.vin || '—';
-  $('p_marca').textContent = v.marca || '—';
-  $('p_modelo').textContent= v.modelo || '—';
-  $('p_anio').textContent  = v.anio || '—';
-  $('p_color').textContent = v.color || '—';
-  $('p_pais').textContent  = v.pais || '—';
-  $('p_notas').textContent = v.notas || '—';
+  if ($('p_vehId')) $('p_vehId').textContent = v.veh_id || '—';
+  if ($('p_fecha')) $('p_fecha').textContent = (v.fecha || '—').toString().slice(0,10);
+  if ($('p_vin'))   $('p_vin').textContent   = v.vin || '—';
+  if ($('p_marca')) $('p_marca').textContent = v.marca || '—';
+  if ($('p_modelo'))$('p_modelo').textContent= v.modelo || '—';
+  if ($('p_anio'))  $('p_anio').textContent  = v.anio || '—';
+  if ($('p_color')) $('p_color').textContent = v.color || '—';
+  if ($('p_pais'))  $('p_pais').textContent  = v.pais || '—';
+  if ($('p_notas')) $('p_notas').textContent = v.notas || '—';
 
-  $('p_total').textContent    = money(ds.reduce((s,d)=> s + Number(d.cost||0), 0));
-  $('p_sevGlobal').textContent= sevGlobal(ds);
+  if ($('p_total'))     $('p_total').textContent    = money(ds.reduce((s,d)=> s + Number(d.cost||0), 0));
+  if ($('p_sevGlobal')) $('p_sevGlobal').textContent= sevGlobal(ds);
 
-  $('p_listado').innerHTML = ds.map((d,i)=>`
-    <div class="card" style="padding:10px;margin:10px 0">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <strong>${i+1}. ${esc(d.parte||'')}</strong>
-        <span class="pill">${esc(d.sev||'')}</span>
-        <span class="pill money">${money(d.cost||0)}</span>
+  if ($('p_listado')) {
+    $('p_listado').innerHTML = ds.map((d,i)=>`
+      <div class="card" style="padding:10px;margin:10px 0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <strong>${i+1}. ${esc(d.parte||'')}</strong>
+          <span class="pill">${esc(d.sev||'')}</span>
+          <span class="pill money">${money(d.cost||0)}</span>
+        </div>
+        <div class="sub">${esc(d.ubic||'')}</div>
+        <div style="margin-top:6px">${esc(d.descrption||'')}</div>
       </div>
-      <div class="sub">${esc(d.ubic||'')}</div>
-      <div style="margin-top:6px">${esc(d.descrption||'')}</div>
-    </div>
-  `).join('');
+    `).join('');
+  }
 
   go('report');
 }
 
 function exportPDF(){
-  const name = `LYN-${($('p_vehId').textContent||'ID')}-${($('p_fecha').textContent||today())}.pdf`;
+  const name = `LYN-${($('p_vehId')?.textContent||'ID')}-${($('p_fecha')?.textContent||today())}.pdf`;
   const prev = document.title;
   document.title = name;
   window.print();
@@ -436,8 +468,8 @@ function exportPDF(){
  * VIN (Decode + opción auto-guardar)
  * =======================================================*/
 async function decodeVIN({ autoSave=true } = {}){
-  const vin = $('vin').value.trim().toUpperCase();
-  if(vin.length !== 17){
+  const vin = $('vin')?.value.trim().toUpperCase();
+  if(!vin || vin.length !== 17){
     alert('El VIN debe tener 17 caracteres.');
     return;
   }
@@ -447,14 +479,12 @@ async function decodeVIN({ autoSave=true } = {}){
     const data= await res.json();
     const r   = data?.Results?.[0] || {};
 
-    // Rellenar SOLO si el campo está vacío (no pisar lo escrito)
-    if(!$('marca').value)  $('marca').value  = r.Make || r.Manufacturer || '';
-    if(!$('modelo').value) $('modelo').value = r.Model || '';
-    if(!$('anio').value)   $('anio').value   = r.ModelYear || '';
-    if(!$('pais').value)   $('pais').value   = r.PlantCountry || r.PlantCity || '';
+    if($('marca')  && !$('marca').value)  $('marca').value  = r.Make || r.Manufacturer || '';
+    if($('modelo') && !$('modelo').value) $('modelo').value = r.Model || '';
+    if($('anio')   && !$('anio').value)   $('anio').value   = r.ModelYear || '';
+    if($('pais')   && !$('pais').value)   $('pais').value   = r.PlantCountry || r.PlantCity || '';
 
-    // Si ya tenemos veh_id, guardamos automáticamente
-    if(autoSave && $('vehId').value.trim()){
+    if(autoSave && $('vehId')?.value.trim()){
       await saveVehicle();
       alert('Datos del VIN aplicados y guardados.');
     }
@@ -467,9 +497,27 @@ async function decodeVIN({ autoSave=true } = {}){
  * Init
  * =======================================================*/
 document.addEventListener('DOMContentLoaded', ()=>{
-  $('fecha').value = today();
+  if ($('fecha')) $('fecha').value = today();
   renderHome();
-  // ← engancha el FAB una sola vez
-  $('fabNew').addEventListener('click', newVehicle);
+
+  // FAB: crear vehículo
+  const fab = $('fabNew');
+  if (fab) fab.addEventListener('click', newVehicle);
+
+  // Botón "+ Nuevo" dentro de Daños (por si no existe aún la lista)
+  const addBtn = $('addDamage');
+  if (addBtn) addBtn.addEventListener('click', ()=> addDamage());
+
+  // Por defecto, mostrar FAB en Home (si la vista quedó activa)
+  toggleFab(true);
 });
-$('addDamage').addEventListener('click', ()=> addDamage());
+
+// Export funciones a window por si hay onclick en HTML
+window.go = go;
+window.newVehicle = newVehicle;
+window.editVehicle = editVehicle;
+window.openDamageList = openDamageList;
+window.openReport = openReport;
+window.removeVehicle = removeVehicle;
+window.decodeVIN = decodeVIN;
+window.exportPDF = exportPDF;
