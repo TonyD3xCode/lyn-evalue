@@ -30,6 +30,14 @@ const partsList = [
   'Marco frontal','Soporte radiador','Travesaño','Panel lateral izq.','Panel lateral der.'
 ];
 
+const MAX_IMG_BYTES = 2.5 * 1024 * 1024; // 2.5 MB por imagen
+
+// Calcula tamaño aproximado de un dataURL base64 en bytes
+function approxBytesFromDataURL(dataUrl){
+  const b64 = (dataUrl.split(',')[1] || '');
+  return Math.floor(b64.length * 3 / 4);
+}
+
 /* Resize imagen → DataURL (para guardar como base64 o URL externa) */
 function resizeToDataURL(file, maxW=1280, quality=.82){
   return new Promise((resolve,reject)=>{
@@ -317,9 +325,15 @@ $('d_fotos').addEventListener('change', async ()=>{
   if(!currentDamage) return;
   const files = Array.from($('d_fotos').files || []);
   for(const f of files){
-    const full  = await resizeToDataURL(f, 1280, .82);
-    const thumb = await resizeToDataURL(f,  320, .80);
-    (currentDamage.imgs = currentDamage.imgs || []).push({ thumb, full });
+  const full  = await resizeToDataURL(f, 1280, .80);
+  const thumb = await resizeToDataURL(f,  320, .80);
+
+if (approxBytesFromDataURL(full) > MAX_IMG_BYTES) {
+  alert('La foto es muy grande incluso tras comprimir. Intenta otra más liviana.');
+  return;
+}
+
+(currentDamage.imgs = currentDamage.imgs || []).push({ thumb, full });
     const im = new Image();
     im.src = thumb;
     im.style.cssText = 'width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--border)';
