@@ -16,10 +16,11 @@ export const handler = async (event) => {
         [vehId]
       );
 
-      // Convierte imgs (JSONB) a objeto JS
       const out = rows.map(r => ({
         ...r,
-        imgs: Array.isArray(r.imgs) ? r.imgs : (typeof r.imgs === 'string' ? JSON.parse(r.imgs || '[]') : (r.imgs || []))
+        imgs: Array.isArray(r.imgs)
+          ? r.imgs
+          : (typeof r.imgs === 'string' ? JSON.parse(r.imgs || '[]') : (r.imgs || []))
       }));
       return json(200, out);
     }
@@ -42,12 +43,23 @@ export const handler = async (event) => {
         INSERT INTO damages (id, veh_id, parte, ubic, sev, descrption, cost, imgs, updated_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now())
         ON CONFLICT (id) DO UPDATE SET
-          parte=EXCLUDED.parte, ubic=EXCLUDED.ubic, sev=EXCLUDED.sev,
-          descrption=EXCLUDED.descrption, cost=EXCLUDED.cost, imgs=EXCLUDED.imgs,
+          parte=EXCLUDED.parte,
+          ubic=EXCLUDED.ubic,
+          sev=EXCLUDED.sev,
+          descrption=EXCLUDED.descrption,
+          cost=EXCLUDED.cost,
+          imgs=EXCLUDED.imgs,
           updated_at=now()
       `, [
-        d.id, d.veh_id, d.parte, d.ubic, d.sev, d.descrption, d.cost,
-        JSON.stringify(d.imgs)      -- guarda como JSONB (texto → jsonb)
+        d.id,
+        d.veh_id,
+        d.parte,
+        d.ubic,
+        d.sev,
+        d.descrption,
+        d.cost,
+        // Guardamos imgs como JSON (Neon lo castea a JSONB)
+        JSON.stringify(d.imgs)
       ]);
 
       return json(200, { ok: true });
