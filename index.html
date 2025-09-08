@@ -17,7 +17,7 @@
 <body>
   <header class="topbar">
     <img src="/assets/logo-lyn.png" alt="LYN AutoSales" class="logo">
-    <div class="brand">LYN AutoSales — Evaluador <span class="sub">Neon • VIN • PDF</span></div>
+    <div class="brand">LYN AutoSales — Evaluador <span class="sub">Tony Dev</span></div>
   </header>
 
   <main>
@@ -119,6 +119,16 @@
     </aside>
   </main>
 
+  <section id="v-repair" class="view">
+  <div class="toolbar">
+    <button class="btn" onclick="go('home')">← Volver</button>
+    <div style="flex:1"></div>
+    <button class="btn" id="btnSharePending">Compartir pendientes</button>
+  </div>
+
+  <h2>Reparación — <span id="repVehTitle"></span></h2>
+  <div id="repList" class="list"></div>
+</section>
   <!-- FAB: crear vehículo -->
 <!-- FAB: crear vehículo -->
 <button id="fabNew" class="fab" type="button" onclick="window.newVehicle && window.newVehicle()">+ Nuevo</button>
