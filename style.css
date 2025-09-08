@@ -201,3 +201,34 @@ input:focus, select:focus, textarea:focus{
   width: 20px; height: 20px;
   accent-color: #22c55e; /* verde */
 }
+
+/* Controles superiores */
+.rep-controls{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin:8px 0 14px;
+}
+.segmented{ display:inline-flex; background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.segmented .seg{
+  padding:6px 10px; border:none; background:transparent; color:var(--fg); cursor:pointer;
+}
+.segmented .seg.on{ background:rgba(255,255,255,.10); font-weight:600; }
+
+.rep-totals{ display:flex; gap:10px; align-items:center; }
+.rep-totals .pill{ font-weight:600; }
+
+/* Fila de reparación con miniatura */
+#v-repair .item{
+  padding:10px 12px; border:1px solid var(--border);
+  border-radius:12px; margin:8px 0; background:rgba(255,255,255,.03);
+}
+.rep-row{
+  display:flex; align-items:center; gap:12px; width:100%;
+}
+.rep-thumb{
+  width:64px; height:64px; object-fit:cover;
+  border-radius:8px; border:1px solid var(--border);
+  background:rgba(255,255,255,.04);
+}
+.rep-main{ flex:1; min-width:0; }
+.rep-main .title{ font-weight:600; }
+.rep-main .sub{ font-size:.85em; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
