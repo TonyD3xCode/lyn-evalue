@@ -139,6 +139,7 @@ async function renderHome(){
       <div class="row" style="padding:12px;border-top:1px solid var(--border)">
         <button class="btn" onclick="editVehicle('${vehId}')">Editar</button>
         <button class="btn" onclick="openDamageList('${vehId}')">Daños</button>
+        <button class="btn" onclick="openRepairList('${vehId}')">Reparación</button>
         <button class="btn" onclick="openReport('${vehId}')">Reporte</button>
         <button class="btn danger" onclick="removeVehicle('${vehId}')">Eliminar</button>
       </div>`;
@@ -496,6 +497,72 @@ async function decodeVIN({ autoSave=true } = {}){
     alert('No se pudo decodificar el VIN.');
   }
 }
+
+async function openRepairList(vehId){
+  currentVeh = vehId;
+  const v = await db.getVehicle(vehId) || {};
+  $('repVehTitle').textContent = `${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||vehId})`;
+  await renderRepairList();
+  go('repair');
+}
+
+async function renderRepairList(){
+  const wrap = $('repList');
+  wrap.innerHTML = '';
+  const ds = await db.listDamages(currentVeh);
+
+  if (!ds.length){
+    wrap.innerHTML = `<div class="empty">No hay daños registrados.</div>`;
+    return;
+  }
+
+  for (const d of ds){
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.innerHTML = `
+      <label style="display:flex;align-items:center;gap:12px;flex:1">
+        <input type="checkbox" ${d.fixed ? 'checked' : ''} data-id="${d.id}">
+        <div style="flex:1">
+          <div class="title">${esc(d.parte||'')}</div>
+          <div class="sub">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
+        </div>
+      </label>
+      <div class="pill money">${money(d.cost||0)}</div>
+    `;
+    row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
+      const checked = ev.currentTarget.checked;
+      await db.saveDamage({
+        id: d.id,
+        veh_id: d.veh_id || currentVeh,
+        parte: d.parte, ubic: d.ubic, sev: d.sev,
+        descrption: d.descrption, cost: d.cost,
+        imgs: d.imgs || [],
+        fixed: checked
+      });
+    });
+    wrap.appendChild(row);
+  }
+}
+
+// Compartir pendientes (WhatsApp o nativo)
+document.getElementById('btnSharePending')?.addEventListener('click', async ()=>{
+  const v  = await db.getVehicle(currentVeh) || {};
+  const ds = await db.listDamages(currentVeh);
+  const pend = ds.filter(d=>!d.fixed);
+  const title = `Pendientes de reparación — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||currentVeh})`;
+  const lines = pend.length
+    ? pend.map((d,i)=>`${i+1}. ${d.parte||''} — ${d.ubic||''} — ${d.sev||''}`)
+    : ['Sin pendientes ✅'];
+  const text = [title, '', ...lines].join('\n');
+
+  if (navigator.share){
+    try { await navigator.share({ text }); return; } catch {}
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+});
+
+// Exponer a window si usas onclick
+window.openRepairList = openRepairList;
 
 /* =========================================================
  * Init
