@@ -316,3 +316,18 @@ input:focus, select:focus, textarea:focus{
   .rep-row{grid-template-columns:26px 68px 1fr auto;gap:10px}
   .rep-thumb{width:68px;height:60px}
 }
+
+/* el modal usa .modal, .modal__panel, .modal__header, etc. ya existentes */
+.modal__logo{width:22px;height:22px;color:#facc15}
+
+/* fila estilo lista de daños (miniatura + info + costo + caret) */
+.dmg-card{
+  display:grid;grid-template-columns: 76px 1fr auto;
+  gap:14px;align-items:center;padding:12px 14px;
+}
+.dmg-thumb{width:76px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#0f1318}
+.dmg-main{min-width:0}
+.dmg-title{font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmg-meta{font-size:.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmg-cost{white-space:nowrap}
+.dmg-row{padding:0;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);margin:10px 0}
