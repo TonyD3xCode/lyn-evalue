@@ -628,33 +628,32 @@ function setSeg(){
 
 // listado con miniaturas y totales
 async function renderRepairList(){
-  const wrap = $('repList'); if(!wrap) return;
+  const wrap = $('repList'); if (!wrap) return;
   wrap.innerHTML = '';
 
-  const all = await db.listDamages(currentVeh);
+  const all = (await db.listDamages(currentVeh)) || [];
 
-  // Totales
-  const pend = all.filter(d=>!d.fixed);
+  // Totales (pendientes)
+  const pend = all.filter(d => !d.fixed);
   const pendSum = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
-  $('repCount').textContent = `${all.length} daños (${pend.length} pendientes)`;
-  $('repPendingSum').textContent = money(pendSum);
+  $('repCount')?.textContent = `${all.length} daños (${pend.length} pendientes)`;
+  $('repPendingSum')?.textContent = money(pendSum);
 
-  // Pendientes primero
-  all.sort((a,b)=> Number(a.fixed) - Number(b.fixed));
+  // Orden: pendientes primero
+  all.sort((a,b) => Number(a.fixed) - Number(b.fixed));
 
-  // Filtro
-  const list = all.filter(d =>
-    repairFilter==='all' ? true :
-    repairFilter==='pending' ? !d.fixed : !!d.fixed
-  );
+  // Filtro actual (si lo usas)
+  const list = (typeof repairFilter === 'string')
+    ? all.filter(d => repairFilter === 'all' ? true : repairFilter === 'pending' ? !d.fixed : !!d.fixed)
+    : all;
 
-  if(!list.length){
+  if (!list.length){
     wrap.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
     return;
   }
 
-  for(const raw of list){
-    // --- Normalizamos nombres por si cambian en BD
+  for (const raw of list){
+    // Normalización de campos por si llegan con otros nombres
     const parte = raw.parte ?? raw.part ?? raw.section ?? '';
     const ubic  = raw.ubic ?? raw.ubicacion ?? raw.location ?? '';
     const sev   = raw.sev ?? raw.severity ?? '';
@@ -663,10 +662,10 @@ async function renderRepairList(){
     const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
 
     const row = document.createElement('div');
-    row.className = `item ${raw.fixed?'is-done':''} sev-${(sev||'').replace(/\s+/g,'')}`;
+    row.className = `item ${raw.fixed ? 'is-done' : ''}`;
     row.innerHTML = `
       <div class="rep-row">
-        <input type="checkbox" ${raw.fixed?'checked':''} data-id="${raw.id}" aria-label="Marcar como reparado">
+        <input type="checkbox" ${raw.fixed ? 'checked' : ''} data-id="${raw.id}" aria-label="Marcar como reparado">
         <img class="rep-thumb" src="${img0}" alt="">
         <div class="rep-main">
           <div class="rep-title">${esc(parte || '—')}</div>
@@ -676,7 +675,7 @@ async function renderRepairList(){
       </div>
     `;
 
-    // Toggle reparado
+    // Toggle "reparado"
     row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
       const checked = ev.currentTarget.checked;
       await db.saveDamage({
@@ -693,7 +692,6 @@ async function renderRepairList(){
     wrap.appendChild(row);
   }
 }
-
 // compartir pendientes (WhatsApp o share nativo)
 $('btnSharePending')?.addEventListener('click', async ()=>{
   const v  = await db.getVehicle(currentVeh) || {};
