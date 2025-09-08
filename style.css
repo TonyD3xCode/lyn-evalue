@@ -8,17 +8,19 @@
   --card:#0f1620;
   --panel:#0e1520;
   --border:#223447;
-  --txt:#e9f1f7;
+
+  --txt:#e9f1f7;     /* texto principal */
+  --fg: var(--txt);  /* alias usado en módulos */
   --muted:#9fb3c8;
 
   --accent:#09d3ac;        /* botones principales */
   --accent-ink:#001b14;
   --danger:#ff5a6a;        /* acciones destructivas */
   --money:#f6c945;         /* totales en USD */
-  --ring: #39ffe2;         /* foco accesible */
+  --ring:#39ffe2;          /* foco accesible */
 }
 
-/* Reset mínimo */
+/* ---------- Reset mínimo ---------- */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -88,7 +90,6 @@ main{padding:14px}
 }
 .meta{display:flex; align-items:center; justify-content:space-between; gap:10px}
 .sub{color:var(--muted); font-size:.9rem}
-.money{background:var(--money); color:#000; font-weight:700; border-color:#000}
 
 /* ---------- Pills ---------- */
 .pill{
@@ -97,7 +98,7 @@ main{padding:14px}
   border:1px solid var(--border); color:var(--muted);
   font-size:.85rem;
 }
-.pill.money{background:var(--money); color:#000; border-color:#000}
+.pill.money{background:var(--money); color:#000; font-weight:700; border-color:#000}
 
 /* ---------- Buttons ---------- */
 .btn{
@@ -111,14 +112,17 @@ main{padding:14px}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
 .btn.danger{background:var(--danger); border-color:var(--danger); color:#fff}
+.btn.sm{padding:6px 10px; font-size:.9em}
+.btn.ghost{background:transparent; border:1px solid var(--border)}
 
 /* ---------- Floating Action Button ---------- */
 .fab{
-  position:fixed; right:16px; bottom:16px; z-index:15;
+  position:fixed; right:16px; bottom:16px; z-index:1000;
   background:var(--accent); color:var(--accent-ink);
   border:none; padding:14px 18px; border-radius:999px;
   font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.25);
 }
+.hidden{display:none !important}
 
 /* ---------- Forms ---------- */
 label{display:grid; gap:6px; color:var(--muted); font-size:.95rem}
@@ -141,7 +145,7 @@ input:focus, select:focus, textarea:focus{
   border-radius:12px; display:block;
 }
 
-/* ---------- Lista de daños ---------- */
+/* ---------- Lista de daños (vista clásica) ---------- */
 .list{display:flex; flex-direction:column; gap:10px}
 .item{
   display:grid; grid-template-columns:84px 1fr auto;
@@ -152,7 +156,7 @@ input:focus, select:focus, textarea:focus{
 .item:hover{border-color:#2c4866}
 .item img{width:84px; height:64px; object-fit:cover; border-radius:10px; background:#0a1118}
 
-/* ---------- Sheet (panel lateral/ modal) ---------- */
+/* ---------- Sheet (panel) ---------- */
 .sheet{
   position:fixed; inset:0; display:none;
   align-items:center; justify-content:center;
@@ -178,156 +182,113 @@ input:focus, select:focus, textarea:focus{
 #p_listado .card{margin:10px 0; padding:10px}
 #p_listado .card .sub{margin-top:4px}
 
-/* ---------- Utilidades ---------- */
-.hidden{display:none !important}
-
-/* ---------- Responsivo ---------- */
-@media (max-width: 760px){
-  .grid2{grid-template-columns:1fr}
-  .topbar{padding:10px 12px}
+/* ---------- Modal base (reutilizable) ---------- */
+.modal{
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(2px); z-index:9999;
 }
-
-.fab{
-  position:fixed; right:16px; bottom:16px;
-  z-index:1000; /* antes 15 */
-  background:var(--accent); color:var(--accent-ink);
-  border:none; padding:14px 18px; border-radius:999px;
-  font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.25);
+.modal.hidden{display:none}
+.modal__panel{
+  width:min(960px,94vw); max-height:90vh; overflow:auto;
+  border:1px solid var(--border); border-radius:16px;
+  background:var(--bg); box-shadow:0 10px 40px rgba(0,0,0,.4); padding:14px 16px;
 }
-.hidden{display:none !important}
+.modal__header{display:flex; align-items:center; gap:12px; justify-content:space-between; margin-bottom:8px}
+.modal__title{display:flex; align-items:center; gap:10px}
+.modal__logo{width:22px; height:22px; opacity:.85; color:#facc15}
+.modal__actions{display:flex; gap:8px}
 
-
-#v-repair .item input[type="checkbox"]{
-  width: 20px; height: 20px;
-  accent-color: #22c55e; /* verde */
-}
-
-/* Controles superiores */
+/* ---------- Controles superiores (modales) ---------- */
 .rep-controls{
   display:flex; align-items:center; justify-content:space-between;
-  gap:12px; margin:8px 0 14px;
+  gap:12px; flex-wrap:wrap; margin:10px 0 8px; padding:0 2px;
 }
-.segmented{ display:inline-flex; background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.segmented{
+  display:inline-flex; background:rgba(255,255,255,.06);
+  border:1px solid var(--border); border-radius:10px; overflow:hidden;
+}
 .segmented .seg{
-  padding:6px 10px; border:none; background:transparent; color:var(--fg); cursor:pointer;
+  padding:6px 10px; border:none; background:transparent; color:var(--txt); cursor:pointer;
 }
-.segmented .seg.on{ background:rgba(255,255,255,.10); font-weight:600; }
+.segmented .seg.on{background:rgba(255,255,255,.1); font-weight:600}
+.rep-summary{display:flex; gap:10px; align-items:center}
+.rep-summary .pill{font-weight:700}
 
-.rep-totals{ display:flex; gap:10px; align-items:center; }
-.rep-totals .pill{ font-weight:600; }
+/* =========================================================
+ * Modal Reparación (lista con miniatura)
+ * =======================================================*/
+#repairModal .modal__panel{ max-width:980px; }
 
-/* Fila de reparación con miniatura */
-#v-repair .item{
-  padding:10px 12px; border:1px solid var(--border);
-  border-radius:12px; margin:8px 0; background:rgba(255,255,255,.03);
+#repairModal .list .item{
+  padding:0; border:1px solid var(--border);
+  border-radius:14px; background:rgba(255,255,255,.03); margin:10px 0;
 }
-.rep-row{
-  display:flex; align-items:center; gap:12px; width:100%;
-}
-.rep-thumb{
-  width:64px; height:64px; object-fit:cover;
-  border-radius:8px; border:1px solid var(--border);
-  background:rgba(255,255,255,.04);
-}
-.rep-main{ flex:1; min-width:0; }
-.rep-main .title{ font-weight:600; }
-.rep-main .sub{ font-size:.85em; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-//* Modal Reparación */
-#repairModal .modal__panel{ max-width: 980px; }
-#repairModal .rep-controls{
-  display:flex; justify-content:space-between; align-items:center;
-  gap:12px; padding:10px 16px;
-}
-#repairModal .list .item{ padding:0; }
 #repairModal .rep-row{
   display:grid;
   grid-template-columns: 28px 76px 1fr auto; /* check | thumb | texto | costo */
   align-items:center; gap:12px; padding:12px 14px;
 }
+
 #repairModal .rep-thumb{
   width:76px; height:60px; object-fit:cover;
   border-radius:10px; border:1px solid var(--border);
   background:#0f1318;
 }
+
 #repairModal .rep-main{ min-width:0; }
 #repairModal .rep-title{
-  font-weight:700; color:var(--fg);
+  font-weight:700; color:var(--txt);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 #repairModal .rep-meta{
-  color:var(--fg); opacity:.9; font-size:.92rem;
+  color:var(--txt); opacity:.9; font-size:.92rem;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 #repairModal .rep-cost{ white-space:nowrap; }
-
-/* ===== MODAL BASE ===== */
-.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.6);backdrop-filter:blur(2px);z-index:9999}
-.modal.hidden{display:none}
-.modal__panel{width:min(960px,94vw);max-height:90vh;overflow:auto;border:1px solid var(--border);
-  border-radius:16px;background:var(--bg);box-shadow:0 10px 40px rgba(0,0,0,.4);padding:14px 16px}
-
-/* header */
-.modal__header{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:8px}
-.modal__title{display:flex;align-items:center;gap:10px}
-.modal__logo{width:22px;height:22px;opacity:.8}
-.modal__actions{display:flex;gap:8px}
-
-/* botones compactos */
-.btn.sm{padding:6px 10px;font-size:.9em}
-.btn.ghost{background:transparent;border:1px solid var(--border)}
-
-/* controles */
-.rep-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0 8px}
-.segmented{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.segmented .seg{padding:6px 10px;border:none;background:transparent;color:var(--fg);cursor:pointer}
-.segmented .seg.on{background:rgba(255,255,255,.1);font-weight:600}
-.rep-summary{display:flex;gap:10px;align-items:center}
-.rep-summary .pill{font-weight:700}
-
-/* lista */
-#repList .item{padding:0;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);margin:10px 0}
-.rep-row{display:grid;grid-template-columns:28px 90px 1fr auto;gap:14px;align-items:center;padding:14px}
-.rep-thumb{width:90px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#0f1318}
-.rep-main{min-width:0}
-.rep-title{font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rep-meta{font-size:.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rep-cost{white-space:nowrap;align-self:start}
-
-/* estados */
 .is-done{opacity:.55}
 .is-done .rep-title{text-decoration:line-through}
 
-/* severidad (sutil) */
+/* Indicador sutil por severidad */
 .sev-Alto  { box-shadow: inset 3px 0 #ef4444 }
 .sev-Medio { box-shadow: inset 3px 0 #f59e0b }
 .sev-Bajo  { box-shadow: inset 3px 0 #22c55e }
 
-/* responsive */
-@media (max-width:520px){
-  .rep-row{grid-template-columns:26px 68px 1fr auto;gap:10px}
-  .rep-thumb{width:68px;height:60px}
+/* =========================================================
+ * Modal Daños (lista compacta)
+ * =======================================================*/
+.dmg-row{
+  padding:0; border:1px solid var(--border);
+  border-radius:14px; background:rgba(255,255,255,.03); margin:10px 0;
 }
-
-/* el modal usa .modal, .modal__panel, .modal__header, etc. ya existentes */
-.modal__logo{width:22px;height:22px;color:#facc15}
-
-/* fila estilo lista de daños (miniatura + info + costo + caret) */
 .dmg-card{
-  display:grid;grid-template-columns: 76px 1fr auto;
-  gap:14px;align-items:center;padding:12px 14px;
+  display:grid; grid-template-columns: 76px 1fr auto; gap:14px; align-items:center; padding:12px 14px;
 }
-.dmg-thumb{width:76px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#0f1318}
+.dmg-thumb{
+  width:76px; height:60px; object-fit:cover;
+  border-radius:10px; border:1px solid var(--border);
+  background:#0f1318;
+}
 .dmg-main{min-width:0}
-.dmg-title{font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dmg-meta{font-size:.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmg-title{font-weight:700; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt)}
+.dmg-meta{font-size:.9em; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt)}
 .dmg-cost{white-space:nowrap}
-.dmg-row{padding:0;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);margin:10px 0}
 
-/* Asegura que el texto del centro siempre sea visible */
-#repList .rep-title, 
-#repList .rep-meta { color: var(--fg); }
+/* =========================================================
+ * Utilidades y responsive
+ * =======================================================*/
+#v-repair .item input[type="checkbox"]{
+  width:20px; height:20px; accent-color:#22c55e; /* verde */
+}
 
-.rep-main{min-width:0}                     /* evita truncar por grid */
-.rep-meta{opacity:.9}                      /* un poco más visible */
+@media (max-width:760px){
+  .grid2{grid-template-columns:1fr}
+  .topbar{padding:10px 12px}
+}
+
+@media (max-width:520px){
+  #repairModal .rep-row{grid-template-columns:26px 68px 1fr auto; gap:10px}
+  #repairModal .rep-thumb{width:68px; height:60px}
+  .dmg-card{grid-template-columns:68px 1fr auto; gap:10px}
+  .dmg-thumb{width:68px; height:60px}
+}
