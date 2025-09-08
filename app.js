@@ -520,15 +520,17 @@ async function renderRepairList(){
     const row = document.createElement('div');
     row.className = 'item';
     row.innerHTML = `
-      <label style="display:flex;align-items:center;gap:12px;flex:1">
-        <input type="checkbox" ${d.fixed ? 'checked' : ''} data-id="${d.id}">
-        <div style="flex:1">
-          <div class="title">${esc(d.parte||'')}</div>
-          <div class="sub">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
-        </div>
-      </label>
-      <div class="pill money">${money(d.cost||0)}</div>
-    `;
+  <div style="display:flex;align-items:center;gap:12px;flex:1;justify-content:space-between">
+    <label style="display:flex;align-items:flex-start;gap:10px;flex:1">
+      <input type="checkbox" ${d.fixed ? 'checked' : ''} data-id="${d.id}" style="margin-top:4px">
+      <div>
+        <div class="title">${esc(d.parte||'')}</div>
+        <div class="sub">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
+      </div>
+    </label>
+    <span class="pill money" style="white-space:nowrap">${money(d.cost||0)}</span>
+  </div>
+`;
     row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
       const checked = ev.currentTarget.checked;
       await db.saveDamage({
