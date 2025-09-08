@@ -119,30 +119,36 @@
     </aside>
   </main>
 
-<section id="v-repair" class="view">
-  <div class="toolbar">
-    <button class="btn" onclick="go('home')">← Volver</button>
-    <div style="flex:1"></div>
-    <button class="btn" id="btnSharePending">Compartir pendientes</button>
-  </div>
+  <!-- ===== Modal Reparación ===== -->
+<div id="repairModal" class="modal hidden" aria-hidden="true">
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="repTitle">
+    <header class="modal__header">
+      <div class="modal__title">
+        <img src="logo-lyn.png" alt="" class="modal__logo">
+        <h3 id="repTitle">Reparación —</h3>
+      </div>
+      <div class="modal__actions">
+        <button id="btnSharePending" class="btn sm">Compartir pendientes</button>
+        <button class="btn sm ghost" id="repCloseBtn" aria-label="Cerrar">✕</button>
+      </div>
+    </header>
 
-  <h2>Reparación — <span id="repVehTitle"></span></h2>
-
-  <div class="rep-controls">
-    <div class="segmented">
-      <button id="repFilterAll"  class="seg on">Todos</button>
-      <button id="repFilterPend" class="seg">Pendientes</button>
-      <button id="repFilterDone" class="seg">Listos</button>
+    <div class="rep-controls">
+      <div class="segmented">
+        <button id="repFilterAll"  class="seg on">Todos</button>
+        <button id="repFilterPend" class="seg">Pendientes</button>
+        <button id="repFilterDone" class="seg">Listos</button>
+      </div>
+      <div class="rep-summary">
+        <span id="repCount">0 daños</span>
+        <span id="repPendingSum" class="pill money">$0</span>
+      </div>
     </div>
 
-    <div class="rep-summary">
-      <span id="repCount"></span>
-      <span id="repPendingSum" class="pill money"></span>
-    </div>
+    <div id="repList" class="list"></div>
   </div>
-
-  <div id="repList" class="list"></div>
-</section>
+</div>
+  
   <!-- FAB: crear vehículo -->
 <!-- FAB: crear vehículo -->
 <button id="fabNew" class="fab" type="button" onclick="window.newVehicle && window.newVehicle()">+ Nuevo</button>
