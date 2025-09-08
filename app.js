@@ -612,8 +612,6 @@ async function renderRepairList(){
       return;
     }
 
-      const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='; // 1x1 transparente
-
     for (const raw of list){
       // Normalización por si llegan con otros nombres
       const parte = raw.parte ?? raw.part ?? raw.section ?? '';
@@ -621,7 +619,7 @@ async function renderRepairList(){
       const sev   = raw.sev ?? raw.severity ?? '';
       const cost  = Number(raw.cost ?? raw.costo ?? 0);
       const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
-      const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : BLANK_IMG;
+      const img0 = (Array.isArray(d.imgs)&&d.imgs[0]) ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0]) : '';
 
       const row = document.createElement('div');
       row.className = `item ${raw.fixed ? 'is-done' : ''}`;
