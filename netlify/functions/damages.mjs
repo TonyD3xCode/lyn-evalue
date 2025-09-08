@@ -7,23 +7,29 @@ export const handler = async (event) => {
   const pool = getPool();
   try {
     if (event.httpMethod === "GET") {
-      const qs = event.queryStringParameters || {};
-      const vehId = qs.veh_id || qs.vehId;
-      if (!vehId) return json(400, { error: "vehId required" });
+  const qs = event.queryStringParameters || {};
+  const vehId = qs.veh_id || qs.vehId;
+  const lite  = qs.lite === '1';  // ← modo liviano: solo thumbs
+  if (!vehId) return json(400, { error: "vehId required" });
 
-      const { rows } = await pool.query(
-        "SELECT * FROM damages WHERE veh_id=$1 ORDER BY updated_at DESC",
-        [vehId]
-      );
+  const { rows } = await pool.query(
+    "SELECT * FROM damages WHERE veh_id=$1 ORDER BY updated_at DESC",
+    [vehId]
+  );
 
-      const out = rows.map(r => ({
-        ...r,
-        imgs: Array.isArray(r.imgs)
-          ? r.imgs
-          : (typeof r.imgs === 'string' ? JSON.parse(r.imgs || '[]') : (r.imgs || []))
-      }));
-      return json(200, out);
-    }
+  // Normaliza imgs desde JSONB y, si lite, devuelve solo thumbs
+  const out = rows.map(r => {
+    const imgsRaw = Array.isArray(r.imgs)
+      ? r.imgs
+      : (typeof r.imgs === 'string' ? JSON.parse(r.imgs || '[]') : (r.imgs || []));
+    const imgs = lite
+      ? imgsRaw.map(x => (x?.thumb ? { thumb: x.thumb } : (typeof x === 'string' ? { thumb: x } : {})))
+      : imgsRaw;
+    return { ...r, imgs };
+  });
+
+  return json(200, out);
+}
 
     if (event.httpMethod === "POST") {
       const b = JSON.parse(event.body || "{}");
