@@ -627,69 +627,90 @@ function setSeg(){
 }
 
 // listado con miniaturas y totales
-async function renderRepairList(){
-  const wrap = $('repList'); if (!wrap) return;
-  wrap.innerHTML = '';
+async function renderRepairList() {
+  try {
+    const wrap = document.getElementById('repList');
+    // Si el modal aún no existe en el DOM, salimos sin romper nada
+    if (!wrap) return;
 
-  const all = (await db.listDamages(currentVeh)) || [];
+    wrap.innerHTML = '';
 
-  // Totales (pendientes)
-  const pend = all.filter(d => !d.fixed);
-  const pendSum = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
-  $('repCount')?.textContent = `${all.length} daños (${pend.length} pendientes)`;
-  $('repPendingSum')?.textContent = money(pendSum);
+    const all = (await db.listDamages(currentVeh)) || [];
 
-  // Orden: pendientes primero
-  all.sort((a,b) => Number(a.fixed) - Number(b.fixed));
+    // Totales (usa optional chaining para no fallar si no existen)
+    const pend = all.filter(d => !d.fixed);
+    const pendSum = pend.reduce((s, d) => s + Number(d.cost || 0), 0);
+    const $count = document.getElementById('repCount');
+    const $sum   = document.getElementById('repPendingSum');
+    if ($count) $count.textContent = `${all.length} daños (${pend.length} pendientes)`;
+    if ($sum)   $sum.textContent   = money(pendSum);
 
-  // Filtro actual (si lo usas)
-  const list = (typeof repairFilter === 'string')
-    ? all.filter(d => repairFilter === 'all' ? true : repairFilter === 'pending' ? !d.fixed : !!d.fixed)
-    : all;
+    // Orden: pendientes primero
+    all.sort((a, b) => Number(a.fixed) - Number(b.fixed));
 
-  if (!list.length){
-    wrap.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
-    return;
-  }
+    // Filtro actual (si no existe, mostramos todo)
+    const list = (typeof window.repairFilter === 'string')
+      ? all.filter(d => window.repairFilter === 'all'
+          ? true
+          : window.repairFilter === 'pending' ? !d.fixed : !!d.fixed)
+      : all;
 
-  for (const raw of list){
-    // Normalización de campos por si llegan con otros nombres
-    const parte = raw.parte ?? raw.part ?? raw.section ?? '';
-    const ubic  = raw.ubic ?? raw.ubicacion ?? raw.location ?? '';
-    const sev   = raw.sev ?? raw.severity ?? '';
-    const cost  = Number(raw.cost ?? raw.costo ?? 0);
-    const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
-    const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
+    if (!list.length) {
+      wrap.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
+      return;
+    }
 
-    const row = document.createElement('div');
-    row.className = `item ${raw.fixed ? 'is-done' : ''}`;
-    row.innerHTML = `
-      <div class="rep-row">
-        <input type="checkbox" ${raw.fixed ? 'checked' : ''} data-id="${raw.id}" aria-label="Marcar como reparado">
-        <img class="rep-thumb" src="${img0}" alt="">
-        <div class="rep-main">
-          <div class="rep-title">${esc(parte || '—')}</div>
-          <div class="rep-meta">${esc(ubic || 'Sin ubicación')} • ${esc(sev || 'Sin severidad')}</div>
+    for (const raw of list) {
+      // Normalización de campos (por si cambian nombres)
+      const parte = raw.parte ?? raw.part ?? raw.section ?? '';
+      const ubic  = raw.ubic  ?? raw.ubicacion ?? raw.location ?? '';
+      const sev   = raw.sev   ?? raw.severity  ?? '';
+      const cost  = Number(raw.cost ?? raw.costo ?? 0);
+      const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
+      const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
+
+      const row = document.createElement('div');
+      row.className = `item ${raw.fixed ? 'is-done' : ''}`;
+      row.innerHTML = `
+        <div class="rep-row">
+          <input type="checkbox" ${raw.fixed ? 'checked' : ''} data-id="${raw.id}" aria-label="Marcar como reparado">
+          <img class="rep-thumb" src="${img0}" alt="">
+          <div class="rep-main">
+            <div class="rep-title">${esc(parte || '—')}</div>
+            <div class="rep-meta">${esc(ubic || 'Sin ubicación')} • ${esc(sev || 'Sin severidad')}</div>
+          </div>
+          <span class="rep-cost pill money">${money(cost)}</span>
         </div>
-        <span class="rep-cost pill money">${money(cost)}</span>
-      </div>
-    `;
+      `;
 
-    // Toggle "reparado"
-    row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
-      const checked = ev.currentTarget.checked;
-      await db.saveDamage({
-        id: raw.id,
-        veh_id: raw.veh_id || currentVeh,
-        parte, ubic, sev,
-        descrption: raw.descrption ?? raw.description ?? '',
-        cost, imgs,
-        fixed: checked
-      });
-      renderRepairList();
-    });
+      // Toggle reparado (sin romper si falla)
+      const chk = row.querySelector('input[type="checkbox"]');
+      if (chk) {
+        chk.addEventListener('change', async (ev) => {
+          try {
+            const checked = ev.currentTarget.checked;
+            await db.saveDamage({
+              id: raw.id,
+              veh_id: raw.veh_id || currentVeh,
+              parte, ubic, sev,
+              descrption: raw.descrption ?? raw.description ?? '',
+              cost, imgs,
+              fixed: checked
+            });
+            renderRepairList();
+          } catch (err) {
+            console.error('saveDamage error:', err);
+            alert('No se pudo actualizar el estado del daño.');
+            ev.currentTarget.checked = !ev.currentTarget.checked;
+          }
+        });
+      }
 
-    wrap.appendChild(row);
+      wrap.appendChild(row);
+    }
+  } catch (e) {
+    // Nunca dejamos que este error mate el resto de la app
+    console.error('renderRepairList error:', e);
   }
 }
 // compartir pendientes (WhatsApp o share nativo)
