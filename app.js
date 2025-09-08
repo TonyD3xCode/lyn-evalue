@@ -139,7 +139,7 @@ async function renderHome(){
       <div class="row" style="padding:12px;border-top:1px solid var(--border)">
         <button class="btn" onclick="editVehicle('${vehId}')">Editar</button>
         <button class="btn" onclick="openDamageModal('${vehId}')">Daños</button>
-        <button class="btn" onclick="openRepair('[[veh_id]]')">Reparación</button>
+        <button class="btn" onclick="openRepair('${vehId}')">Reparación</button>
         <button class="btn" onclick="openReport('${vehId}')">Reporte</button>
         <button class="btn danger" onclick="removeVehicle('${vehId}')">Eliminar</button>
       </div>`;
@@ -572,18 +572,24 @@ async function renderDamageModalList(){
     box.appendChild(row);
   }
 }
-
 /* ===== Reparación (modal) ===== */
-/* ---------- Reparación: abrir/cerrar ---------- */
 let repairFilter = 'all'; // 'all' | 'pending' | 'done'
+
+function setSeg(idActive){
+  ['repFilterAll','repFilterPend','repFilterDone'].forEach(id=>{
+    const b = document.getElementById(id);
+    if (b) b.classList.toggle('on', id===idActive);
+  });
+}
 
 async function renderRepairList(){
   try{
     const wrap = document.getElementById('repList');
-    if (!wrap) return;
+    if (!wrap) return;         // si el modal no existe, no rompemos nada
     wrap.innerHTML = '';
 
     const all = (await db.listDamages(currentVeh)) || [];
+
     // Totales
     const pend = all.filter(d => !d.fixed);
     const pendSum = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
@@ -603,13 +609,16 @@ async function renderRepairList(){
       return;
     }
 
+    const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='; // 1x1 transparente
+
     for (const raw of list){
+      // Normalización por si llegan con otros nombres
       const parte = raw.parte ?? raw.part ?? raw.section ?? '';
       const ubic  = raw.ubic ?? raw.ubicacion ?? raw.location ?? '';
       const sev   = raw.sev ?? raw.severity ?? '';
       const cost  = Number(raw.cost ?? raw.costo ?? 0);
       const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
-      const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
+      const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : BLANK_IMG;
 
       const row = document.createElement('div');
       row.className = `item ${raw.fixed ? 'is-done' : ''}`;
@@ -633,7 +642,7 @@ async function renderRepairList(){
             id: raw.id,
             veh_id: raw.veh_id || currentVeh,
             parte, ubic, sev,
-            descrption: raw.descrption ?? raw.description ?? '',
+            descrption: raw.descrption ?? raw.description ?? '', // tu campo real en BD
             cost, imgs,
             fixed: checked
           });
@@ -654,7 +663,7 @@ async function renderRepairList(){
 
 function openRepair(vehId){
   currentVeh = vehId;
-  // título
+
   (async()=>{
     const v = await db.getVehicle(vehId) || {};
     const title = `${(v.marca||'').toUpperCase()} ${v.modelo||''} ${v.anio||''} (${v.veh_id||vehId})`.trim();
@@ -662,11 +671,11 @@ function openRepair(vehId){
     if (h) h.textContent = `Reparación — ${title}`;
   })();
 
-  // mostrar modal
   const m = document.getElementById('repairModal');
   if (m){ m.classList.remove('hidden'); m.setAttribute('aria-hidden','false'); }
 
-  // render
+  setSeg('repFilterAll');
+  repairFilter = 'all';
   renderRepairList();
 }
 
@@ -675,45 +684,43 @@ function closeRepair(){
   if (m){ m.classList.add('hidden'); m.setAttribute('aria-hidden','true'); }
 }
 
-/* botones cabecera (una sola vez) */
-document.getElementById('repCloseBtn')?.addEventListener('click', closeRepair);
-document.getElementById('repFilterAll')?.addEventListener('click', ()=>{ repairFilter='all';     renderRepairList(); setSeg('repFilterAll'); });
-document.getElementById('repFilterPend')?.addEventListener('click', ()=>{ repairFilter='pending'; renderRepairList(); setSeg('repFilterPend'); });
-document.getElementById('repFilterDone')?.addEventListener('click', ()=>{ repairFilter='done';    renderRepairList(); setSeg('repFilterDone'); });
+/* Init seguro (listeners una sola vez) */
+function initRepairModal(){
+  document.getElementById('repCloseBtn')?.addEventListener('click', closeRepair);
+  document.getElementById('repFilterAll')?.addEventListener('click', ()=>{ repairFilter='all';     renderRepairList(); setSeg('repFilterAll'); });
+  document.getElementById('repFilterPend')?.addEventListener('click', ()=>{ repairFilter='pending'; renderRepairList(); setSeg('repFilterPend'); });
+  document.getElementById('repFilterDone')?.addEventListener('click', ()=>{ repairFilter='done';    renderRepairList(); setSeg('repFilterDone'); });
 
-function setSeg(idActive){
-  for (const id of ['repFilterAll','repFilterPend','repFilterDone']){
-    const b = document.getElementById(id);
-    if (b) b.classList.toggle('on', id===idActive);
-  }
+  document.getElementById('btnSharePending')?.addEventListener('click', async ()=>{
+    const list = await db.listDamages(currentVeh) || [];
+    const v = await db.getVehicle(currentVeh) || {};
+    const pend = list.filter(d=>!d.fixed);
+    const lines = [
+      `Pendientes — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||currentVeh})`,
+      '--------------------------------'
+    ];
+    pend.forEach((d,i)=>{
+      const parte = d.parte ?? d.part ?? d.section ?? '—';
+      const ubic  = d.ubic ?? d.ubicacion ?? d.location ?? 'Sin ubicación';
+      const sev   = d.sev ?? d.severity ?? '—';
+      const cost  = Number(d.cost ?? d.costo ?? 0);
+      lines.push(`${i+1}. ${parte} — ${ubic} • ${sev} • ${money(cost)}`);
+    });
+    if (!pend.length) lines.push('No hay pendientes ✅');
+    const msg = encodeURIComponent(lines.join('\n'));
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+  });
+
+  // Exponer función para usar en el botón de la tarjeta
+  window.openRepair = openRepair;     // <- nombre correcto
+  window.openRepairModal = openRepair; // <- alias opcional si ya lo usabas en HTML
 }
 
-/* compartir pendientes (WhatsApp) */
-document.getElementById('btnSharePending')?.addEventListener('click', async ()=>{
-  const list = await db.listDamages(currentVeh) || [];
-  const v = await db.getVehicle(currentVeh) || {};
-  const pend = list.filter(d=>!d.fixed);
-
-  const lines = [
-    `Pendientes — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||currentVeh})`,
-    '--------------------------------'
-  ];
-  pend.forEach((d,i)=>{
-    const parte = d.parte ?? d.part ?? d.section ?? '—';
-    const ubic  = d.ubic ?? d.ubicacion ?? d.location ?? 'Sin ubicación';
-    const sev   = d.sev ?? d.severity ?? '—';
-    const cost  = Number(d.cost ?? d.costo ?? 0);
-    lines.push(`${i+1}. ${parte} — ${ubic} • ${sev} • ${money(cost)}`);
-  });
-  if (!pend.length) lines.push('No hay pendientes ✅');
-
-  const msg = encodeURIComponent(lines.join('\n'));
-  const url = `https://wa.me/?text=${msg}`;
-  window.open(url, '_blank');
-});
-
-// expón función para el botón de la tarjeta
-window.openRepairModal = openRepairModal;
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initRepairModal, { once:true });
+} else {
+  initRepairModal();
+}
 
 /* =========================================================
  * Init
