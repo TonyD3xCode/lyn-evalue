@@ -90,7 +90,8 @@ const db = {
   }),
 
   /* Daños */
-  listDamages: (vehId) => api('damages?vehId='+encodeURIComponent(vehId)).then(x=>Array.isArray(x)?x:[]),
+  listDamages: (vehId) => api('damages?vehId='+encodeURIComponent(vehId)+'&lite=1')
+  .then(x=>Array.isArray(x)?x:[]),
   saveDamage: (d) => api('damages', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(d)
