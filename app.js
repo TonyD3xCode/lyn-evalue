@@ -574,97 +574,39 @@ async function renderDamageModalList(){
 }
 
 /* ===== Reparación (modal) ===== */
+/* ---------- Reparación: abrir/cerrar ---------- */
 let repairFilter = 'all'; // 'all' | 'pending' | 'done'
-let repOpen = false;
 
-async function openRepairModal(vehId){
-  currentVeh = vehId;
-  const v = await db.getVehicle(vehId) || {};
-  $('repTitle').textContent = `Reparación — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||vehId})`;
-
-  setSeg();           // refleja el filtro actual
-  await renderRepairList();
-
-  const m = $('repairModal');
-  m.classList.remove('hidden');
-  m.setAttribute('aria-hidden','false');
-  document.body.style.overflow='hidden';
-  repOpen = true;
-}
-
-function closeRepairModal(){
-  $('repairModal').classList.add('hidden');
-  $('repairModal').setAttribute('aria-hidden','true');
-  document.body.style.overflow='';
-  repOpen = false;
-}
-
-// cierra al pulsar fuera del panel
-$('repairModal')?.addEventListener('click', (e)=>{
-  if(e.target.id === 'repairModal') closeRepairModal();
-});
-// botón X
-$('repCloseBtn')?.addEventListener('click', closeRepairModal);
-// ESC
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'Escape' && repOpen) closeRepairModal();
-});
-
-// filtros
-$('repFilterAll') ?.addEventListener('click', ()=>{ repairFilter='all';    setSeg(); renderRepairList(); });
-$('repFilterPend')?.addEventListener('click', ()=>{ repairFilter='pending'; setSeg(); renderRepairList(); });
-$('repFilterDone')?.addEventListener('click', ()=>{ repairFilter='done';    setSeg(); renderRepairList(); });
-
-function setSeg(){
-  ['repFilterAll','repFilterPend','repFilterDone'].forEach(id=>{
-    const el = $(id); if(!el) return;
-    el.classList.toggle('on',
-      (id==='repFilterAll'  && repairFilter==='all') ||
-      (id==='repFilterPend' && repairFilter==='pending') ||
-      (id==='repFilterDone' && repairFilter==='done')
-    );
-  });
-}
-
-// listado con miniaturas y totales
-async function renderRepairList() {
-  try {
+async function renderRepairList(){
+  try{
     const wrap = document.getElementById('repList');
-    // Si el modal aún no existe en el DOM, salimos sin romper nada
     if (!wrap) return;
-
     wrap.innerHTML = '';
 
     const all = (await db.listDamages(currentVeh)) || [];
-
-    // Totales (usa optional chaining para no fallar si no existen)
+    // Totales
     const pend = all.filter(d => !d.fixed);
-    const pendSum = pend.reduce((s, d) => s + Number(d.cost || 0), 0);
+    const pendSum = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
     const $count = document.getElementById('repCount');
     const $sum   = document.getElementById('repPendingSum');
     if ($count) $count.textContent = `${all.length} daños (${pend.length} pendientes)`;
     if ($sum)   $sum.textContent   = money(pendSum);
 
-    // Orden: pendientes primero
-    all.sort((a, b) => Number(a.fixed) - Number(b.fixed));
-
-    // Filtro actual (si no existe, mostramos todo)
-    const list = (typeof window.repairFilter === 'string')
-      ? all.filter(d => window.repairFilter === 'all'
-          ? true
-          : window.repairFilter === 'pending' ? !d.fixed : !!d.fixed)
+    // Orden y filtro
+    all.sort((a,b)=> Number(a.fixed) - Number(b.fixed));
+    const list = (typeof repairFilter==='string')
+      ? all.filter(d => repairFilter==='all' ? true : repairFilter==='pending' ? !d.fixed : !!d.fixed)
       : all;
 
-    if (!list.length) {
+    if (!list.length){
       wrap.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
       return;
     }
 
-    for (const raw of list) {
-      // Normalización de campos (por si cambian nombres)
+    for (const raw of list){
       const parte = raw.parte ?? raw.part ?? raw.section ?? '';
-      const ubic  = raw.ubic  ?? raw.ubicacion ?? raw.location ?? '';
-      const sev   = raw.sev   ?? raw.severity  ?? '';
+      const ubic  = raw.ubic ?? raw.ubicacion ?? raw.location ?? '';
+      const sev   = raw.sev ?? raw.severity ?? '';
       const cost  = Number(raw.cost ?? raw.costo ?? 0);
       const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
       const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
@@ -673,7 +615,7 @@ async function renderRepairList() {
       row.className = `item ${raw.fixed ? 'is-done' : ''}`;
       row.innerHTML = `
         <div class="rep-row">
-          <input type="checkbox" ${raw.fixed ? 'checked' : ''} data-id="${raw.id}" aria-label="Marcar como reparado">
+          <input type="checkbox" ${raw.fixed ? 'checked' : ''} aria-label="Marcar como reparado">
           <img class="rep-thumb" src="${img0}" alt="">
           <div class="rep-main">
             <div class="rep-title">${esc(parte || '—')}</div>
@@ -683,51 +625,91 @@ async function renderRepairList() {
         </div>
       `;
 
-      // Toggle reparado (sin romper si falla)
-      const chk = row.querySelector('input[type="checkbox"]');
-      if (chk) {
-        chk.addEventListener('change', async (ev) => {
-          try {
-            const checked = ev.currentTarget.checked;
-            await db.saveDamage({
-              id: raw.id,
-              veh_id: raw.veh_id || currentVeh,
-              parte, ubic, sev,
-              descrption: raw.descrption ?? raw.description ?? '',
-              cost, imgs,
-              fixed: checked
-            });
-            renderRepairList();
-          } catch (err) {
-            console.error('saveDamage error:', err);
-            alert('No se pudo actualizar el estado del daño.');
-            ev.currentTarget.checked = !ev.currentTarget.checked;
-          }
-        });
-      }
+      // toggle fixed
+      row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
+        try{
+          const checked = ev.currentTarget.checked;
+          await db.saveDamage({
+            id: raw.id,
+            veh_id: raw.veh_id || currentVeh,
+            parte, ubic, sev,
+            descrption: raw.descrption ?? raw.description ?? '',
+            cost, imgs,
+            fixed: checked
+          });
+          renderRepairList();
+        }catch(e){
+          console.error(e);
+          alert('No se pudo actualizar el estado.');
+          ev.currentTarget.checked = !ev.currentTarget.checked;
+        }
+      });
 
       wrap.appendChild(row);
     }
-  } catch (e) {
-    // Nunca dejamos que este error mate el resto de la app
+  }catch(e){
     console.error('renderRepairList error:', e);
   }
 }
-// compartir pendientes (WhatsApp o share nativo)
-$('btnSharePending')?.addEventListener('click', async ()=>{
-  const v  = await db.getVehicle(currentVeh) || {};
-  const all= await db.listDamages(currentVeh);
-  const pend = all.filter(d=>!d.fixed);
-  const total = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
 
-  const title = `Pendientes de reparación — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||currentVeh})`;
-  const lines = pend.length
-    ? pend.map((d,i)=>`${i+1}. ${d.parte||''} — ${d.ubic||''} — ${d.sev||''} — ${money(d.cost||0)}`)
-    : ['Sin pendientes ✅'];
-  const text = [title, '', ...lines, '', `Total pendiente: ${money(total)}`].join('\n');
+function openRepair(vehId){
+  currentVeh = vehId;
+  // título
+  (async()=>{
+    const v = await db.getVehicle(vehId) || {};
+    const title = `${(v.marca||'').toUpperCase()} ${v.modelo||''} ${v.anio||''} (${v.veh_id||vehId})`.trim();
+    const h = document.getElementById('repTitle');
+    if (h) h.textContent = `Reparación — ${title}`;
+  })();
 
-  if (navigator.share){ try { await navigator.share({ text }); return; } catch{} }
-  window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+  // mostrar modal
+  const m = document.getElementById('repairModal');
+  if (m){ m.classList.remove('hidden'); m.setAttribute('aria-hidden','false'); }
+
+  // render
+  renderRepairList();
+}
+
+function closeRepair(){
+  const m = document.getElementById('repairModal');
+  if (m){ m.classList.add('hidden'); m.setAttribute('aria-hidden','true'); }
+}
+
+/* botones cabecera (una sola vez) */
+document.getElementById('repCloseBtn')?.addEventListener('click', closeRepair);
+document.getElementById('repFilterAll')?.addEventListener('click', ()=>{ repairFilter='all';     renderRepairList(); setSeg('repFilterAll'); });
+document.getElementById('repFilterPend')?.addEventListener('click', ()=>{ repairFilter='pending'; renderRepairList(); setSeg('repFilterPend'); });
+document.getElementById('repFilterDone')?.addEventListener('click', ()=>{ repairFilter='done';    renderRepairList(); setSeg('repFilterDone'); });
+
+function setSeg(idActive){
+  for (const id of ['repFilterAll','repFilterPend','repFilterDone']){
+    const b = document.getElementById(id);
+    if (b) b.classList.toggle('on', id===idActive);
+  }
+}
+
+/* compartir pendientes (WhatsApp) */
+document.getElementById('btnSharePending')?.addEventListener('click', async ()=>{
+  const list = await db.listDamages(currentVeh) || [];
+  const v = await db.getVehicle(currentVeh) || {};
+  const pend = list.filter(d=>!d.fixed);
+
+  const lines = [
+    `Pendientes — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||currentVeh})`,
+    '--------------------------------'
+  ];
+  pend.forEach((d,i)=>{
+    const parte = d.parte ?? d.part ?? d.section ?? '—';
+    const ubic  = d.ubic ?? d.ubicacion ?? d.location ?? 'Sin ubicación';
+    const sev   = d.sev ?? d.severity ?? '—';
+    const cost  = Number(d.cost ?? d.costo ?? 0);
+    lines.push(`${i+1}. ${parte} — ${ubic} • ${sev} • ${money(cost)}`);
+  });
+  if (!pend.length) lines.push('No hay pendientes ✅');
+
+  const msg = encodeURIComponent(lines.join('\n'));
+  const url = `https://wa.me/?text=${msg}`;
+  window.open(url, '_blank');
 });
 
 // expón función para el botón de la tarjeta
