@@ -612,33 +612,20 @@ async function renderRepairList(){
       return;
     }
 
-    const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='; // 1x1 transparente
-
-    for (const raw of list){
-      // 🔐 Normalización con fallbacks visibles
-      const parte = (raw.parte ?? raw.part ?? raw.section ?? '').toString().trim();
-      const ubic  = (raw.ubic ?? raw.ubicacion ?? raw.location ?? '').toString().trim();
-      const sev   = (raw.sev ?? raw.severity ?? '').toString().trim();
-      const cost  = Number(raw.cost ?? raw.costo ?? 0);
-      const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
-      const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : BLANK_IMG;
-
-      const titleTxt = parte || '—';
-      const metaTxt  = `${ubic || 'Sin ubicación'} • ${sev || 'Sin severidad'}`;
-
-      const row = document.createElement('div');
-      row.className = `item ${raw.fixed ? 'is-done' : ''}`;
-      row.innerHTML = `
-        <div class="rep-row">
-          <input type="checkbox" ${raw.fixed ? 'checked' : ''} aria-label="Marcar como reparado">
-          <img class="rep-thumb" src="${img0}" alt="">
-          <div class="rep-main" style="min-width:0">
-            <div class="rep-title" style="color:#e9f1f7">${esc(titleTxt)}</div>
-            <div class="rep-meta"  style="color:#e9f1f7;opacity:.9">${esc(metaTxt)}</div>
-          </div>
-          <span class="rep-cost pill money">${money(cost)}</span>
+    for(const d of data){
+    const img0 = (Array.isArray(d.imgs)&&d.imgs[0]) ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0]) : '';
+    const row = document.createElement('div');
+    row.className = 'dmg-row';
+    row.innerHTML = `
+      <div class="dmg-card">
+        <img class="dmg-thumb" src="${img0}" alt="">
+        <div class="dmg-main">
+          <div class="dmg-title">${esc(d.parte||'')}</div>
+          <div class="dmg-meta">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
         </div>
-      `;
+        <span class="dmg-cost pill money">${money(d.cost||0)}</span>
+      </div>
+    `;
 
       // Toggle reparado
       row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
