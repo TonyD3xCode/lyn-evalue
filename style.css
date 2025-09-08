@@ -331,3 +331,10 @@ input:focus, select:focus, textarea:focus{
 .dmg-meta{font-size:.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dmg-cost{white-space:nowrap}
 .dmg-row{padding:0;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);margin:10px 0}
+
+/* Asegura que el texto del centro siempre sea visible */
+#repList .rep-title, 
+#repList .rep-meta { color: var(--fg); }
+
+.rep-main{min-width:0}                     /* evita truncar por grid */
+.rep-meta{opacity:.9}                      /* un poco más visible */
