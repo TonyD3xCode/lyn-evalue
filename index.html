@@ -33,7 +33,12 @@
     <section id="v-veh" class="view">
       <h3>Ficha del vehículo</h3>
       <div class="form grid2">
-        <label>Vehículo ID<input id="vehId" placeholder="LYNA-0001"></label>
+        <!-- En la ficha de vehículo -->
+          <div class="kv">
+            <label>Vehículo ID</label>
+            <div id="vehIdView" class="pill mono">Se asignará al guardar</div>
+            <input type="hidden" id="vehId"><!-- oculto: para updates -->
+          </div>
         <label>Fecha<input id="fecha" type="date"></label>
         <label>VIN (17)<input id="vin" maxlength="17" placeholder="1HG..."></label>
         <label>Marca<input id="marca"></label>
