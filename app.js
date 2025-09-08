@@ -138,7 +138,7 @@ async function renderHome(){
       </div>
       <div class="row" style="padding:12px;border-top:1px solid var(--border)">
         <button class="btn" onclick="editVehicle('${vehId}')">Editar</button>
-        <button class="btn" onclick="openDamageList('${vehId}')">Daños</button>
+        <button class="btn" onclick="openDamageModal('${vehId}')">Daños</button>
         <button class="btn" onclick="openRepairModal('${vehId}')">Reparación</button>
         <button class="btn" onclick="openReport('${vehId}')">Reporte</button>
         <button class="btn danger" onclick="removeVehicle('${vehId}')">Eliminar</button>
@@ -495,6 +495,76 @@ async function decodeVIN({ autoSave=true } = {}){
     }
   }catch{
     alert('No se pudo decodificar el VIN.');
+  }
+}
+
+/* ===== Modal Daños ===== */
+let dmgModalOpen = false;
+
+async function openDamageModal(vehId){
+  currentVeh = vehId;
+  const v = await db.getVehicle(vehId) || {};
+  $('dmgTitle').textContent = `Daños — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||vehId})`;
+
+  await renderDamageModalList();
+
+  const m = $('damageModal');
+  m.classList.remove('hidden');
+  m.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+  dmgModalOpen = true;
+}
+
+function closeDamageModal(){
+  $('damageModal').classList.add('hidden');
+  $('damageModal').setAttribute('aria-hidden','true');
+  document.body.style.overflow='';
+  dmgModalOpen = false;
+}
+
+// eventos generales del modal
+$('damageModal')?.addEventListener('click', (e)=>{ if(e.target.id==='damageModal') closeDamageModal(); });
+$('dmgCloseBtn')?.addEventListener('click', closeDamageModal);
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && dmgModalOpen) closeDamageModal(); });
+
+// botón “+ Nuevo”
+$('dmgNewBtn')?.addEventListener('click', ()=>{
+  // usa tu función existente de alta
+  addDamage();               // abre el sheet lateral ya implementado
+});
+
+// render listado
+async function renderDamageModalList(){
+  const box = $('dmgModalList'); if(!box) return;
+  box.innerHTML = '';
+
+  const data = await db.listDamages(currentVeh);
+  const total = data.reduce((s,d)=> s + Number(d.cost||0), 0);
+  $('dmgCount').textContent = `${data.length} daños`;
+  $('dmgSum').textContent   = money(total);
+
+  if(!data.length){
+    box.innerHTML = `<div class="empty">No hay daños registrados.</div>`;
+    return;
+  }
+
+  for(const d of data){
+    const img0 = (Array.isArray(d.imgs)&&d.imgs[0]) ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0]) : '';
+    const row = document.createElement('div');
+    row.className = 'dmg-row';
+    row.innerHTML = `
+      <div class="dmg-card">
+        <img class="dmg-thumb" src="${img0}" alt="">
+        <div class="dmg-main">
+          <div class="dmg-title">${esc(d.parte||'')}</div>
+          <div class="dmg-meta">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
+        </div>
+        <span class="dmg-cost pill money">${money(d.cost||0)}</span>
+      </div>
+    `;
+    // al click → abrir el sheet existente para editar
+    row.addEventListener('click', ()=> openSheet(d, false));
+    box.appendChild(row);
   }
 }
 
