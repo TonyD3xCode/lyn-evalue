@@ -232,3 +232,38 @@ input:focus, select:focus, textarea:focus{
 .rep-main{ flex:1; min-width:0; }
 .rep-main .title{ font-weight:600; }
 .rep-main .sub{ font-size:.85em; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ===== Reparación (layout nuevo) ===== */
+#v-repair .rep-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 14px}
+#v-repair .segmented{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+#v-repair .seg{padding:6px 10px;border:none;background:transparent;color:var(--fg);cursor:pointer}
+#v-repair .seg.on{background:rgba(255,255,255,.10);font-weight:600}
+
+#v-repair .rep-totals{display:flex;gap:10px;align-items:center}
+#v-repair .rep-summary{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+#v-repair .rep-summary .pill{font-weight:700}
+
+#v-repair .item{padding:0;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);margin:10px 0}
+#v-repair .rep-card{
+  display:grid; grid-template-columns: 28px 72px 1fr auto;
+  gap:14px; align-items:center; padding:14px;
+}
+#v-repair .rep-thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#101317}
+#v-repair .rep-content{min-width:0}
+#v-repair .rep-title{font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#v-repair .rep-meta{font-size:.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#v-repair .rep-cost{white-space:nowrap;align-self:start}
+
+#v-repair .is-done{opacity:.55}
+#v-repair .is-done .rep-title{ text-decoration: line-through; }
+
+/* bordes de severidad (discreto) */
+#v-repair .sev-Alto  { box-shadow: inset 3px 0 #ef4444; }
+#v-repair .sev-Medio { box-shadow: inset 3px 0 #f59e0b; }
+#v-repair .sev-Bajo  { box-shadow: inset 3px 0 #22c55e; }
+
+/* Responsive: en pantallas muy angostas, miniatura más chica */
+@media (max-width: 420px){
+  #v-repair .rep-card{grid-template-columns: 26px 56px 1fr auto; gap:10px}
+  #v-repair .rep-thumb{width:56px;height:56px}
+}
