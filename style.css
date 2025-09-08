@@ -196,3 +196,8 @@ input:focus, select:focus, textarea:focus{
 }
 .hidden{display:none !important}
 
+
+#v-repair .item input[type="checkbox"]{
+  width: 20px; height: 20px;
+  accent-color: #22c55e; /* verde */
+}
