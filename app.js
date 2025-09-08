@@ -168,18 +168,10 @@ function go(view){
 
 function newVehicle(){
   currentVeh = null;
-  if ($('vehId')) $('vehId').value = '';                       // hidden vacío
-  if ($('vehIdView')) $('vehIdView').textContent = 'Se asignará al guardar';
-  if ($('fecha'))   $('fecha').value=today();
-  if ($('vin'))     $('vin').value='';
-  if ($('marca'))   $('marca').value='';
-  if ($('modelo'))  $('modelo').value='';
-  if ($('anio'))    $('anio').value='';
-  if ($('color'))   $('color').value='';
-  if ($('pais'))    $('pais').value='';
-  if ($('notas'))   $('notas').value='';
-  if ($('vehPhoto')) $('vehPhoto').value='';
-  if ($('vehPhotoThumb')) $('vehPhotoThumb').innerHTML='';
+  $('vehId').value=''; $('fecha').value=today(); $('vin').value='';
+  $('marca').value=''; $('modelo').value=''; $('anio').value='';
+  $('color').value=''; $('pais').value=''; $('notas').value='';
+  $('vehPhoto').value=''; $('vehPhotoThumb').innerHTML='';
   go('veh');
 }
 
@@ -205,25 +197,30 @@ async function editVehicle(id){
 }
 
 async function saveVehicle(){
+  // construimos payload en snake_case (coincide con la BD y las funciones)
   const payload = {
-    fecha:         ( ($('fecha')?.value) || today()).slice(0,10),
-    vin:           $('vin')?.value.trim().toUpperCase(),
-    marca:         $('marca')?.value.trim(),
-    modelo:        $('modelo')?.value.trim(),
-    anio:          $('anio')?.value.trim(),
-    color:         $('color')?.value.trim(),
-    pais:          $('pais')?.value.trim(),
-    notas:         $('notas')?.value.trim(),
+    // si estás editando, manda veh_id; si es nuevo, NO lo mandes
+    ...(currentVeh ? { veh_id: $('vehId').value.trim() } : {}),
+    fecha:         ($('fecha').value || today()).slice(0,10),
+    vin:           $('vin').value.trim().toUpperCase(),
+    marca:         $('marca').value.trim(),
+    modelo:        $('modelo').value.trim(),
+    anio:          $('anio').value.trim() || null,
+    color:         $('color').value.trim(),
+    pais:          $('pais').value.trim(),
+    notas:         $('notas').value.trim(),
     foto_vehiculo: document.querySelector('#vehPhotoThumb img')?.src || null
   };
 
-  if (vehIdHidden) payload.veh_id = vehIdHidden;
+  const res = await db.saveVehicle(payload);
+  if (!res) return;
 
-  const saved = await db.saveVehicle(payload);   // devuelve el registro con veh_id real
-  if (saved?.veh_id){
-    $('vehId').value = saved.veh_id;
-    $('vehIdView').textContent = saved.veh_id;
+  // si el server generó el ID, úsalo
+  if (res.veh_id) {
+    currentVeh = res.veh_id;
+    $('vehId').value = res.veh_id; // visible solo-lectura si quieres
   }
+
   go('home');
   renderHome();
 }
