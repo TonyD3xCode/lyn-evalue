@@ -267,3 +267,52 @@ input:focus, select:focus, textarea:focus{
   #v-repair .rep-card{grid-template-columns: 26px 56px 1fr auto; gap:10px}
   #v-repair .rep-thumb{width:56px;height:56px}
 }
+
+/* ===== MODAL BASE ===== */
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(2px);z-index:9999}
+.modal.hidden{display:none}
+.modal__panel{width:min(960px,94vw);max-height:90vh;overflow:auto;border:1px solid var(--border);
+  border-radius:16px;background:var(--bg);box-shadow:0 10px 40px rgba(0,0,0,.4);padding:14px 16px}
+
+/* header */
+.modal__header{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:8px}
+.modal__title{display:flex;align-items:center;gap:10px}
+.modal__logo{width:22px;height:22px;opacity:.8}
+.modal__actions{display:flex;gap:8px}
+
+/* botones compactos */
+.btn.sm{padding:6px 10px;font-size:.9em}
+.btn.ghost{background:transparent;border:1px solid var(--border)}
+
+/* controles */
+.rep-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0 8px}
+.segmented{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.segmented .seg{padding:6px 10px;border:none;background:transparent;color:var(--fg);cursor:pointer}
+.segmented .seg.on{background:rgba(255,255,255,.1);font-weight:600}
+.rep-summary{display:flex;gap:10px;align-items:center}
+.rep-summary .pill{font-weight:700}
+
+/* lista */
+#repList .item{padding:0;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);margin:10px 0}
+.rep-row{display:grid;grid-template-columns:28px 90px 1fr auto;gap:14px;align-items:center;padding:14px}
+.rep-thumb{width:90px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#0f1318}
+.rep-main{min-width:0}
+.rep-title{font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-meta{font-size:.9em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-cost{white-space:nowrap;align-self:start}
+
+/* estados */
+.is-done{opacity:.55}
+.is-done .rep-title{text-decoration:line-through}
+
+/* severidad (sutil) */
+.sev-Alto  { box-shadow: inset 3px 0 #ef4444 }
+.sev-Medio { box-shadow: inset 3px 0 #f59e0b }
+.sev-Bajo  { box-shadow: inset 3px 0 #22c55e }
+
+/* responsive */
+@media (max-width:520px){
+  .rep-row{grid-template-columns:26px 68px 1fr auto;gap:10px}
+  .rep-thumb{width:68px;height:60px}
+}
