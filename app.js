@@ -167,7 +167,8 @@ function go(view){
 
 function newVehicle(){
   currentVeh = null;
-  if ($('vehId'))   $('vehId').value='';
+  if ($('vehId')) $('vehId').value = '';                       // hidden vacío
+  if ($('vehIdView')) $('vehIdView').textContent = 'Se asignará al guardar';
   if ($('fecha'))   $('fecha').value=today();
   if ($('vin'))     $('vin').value='';
   if ($('marca'))   $('marca').value='';
@@ -185,6 +186,7 @@ async function editVehicle(id){
   currentVeh = id;
   const v = await db.getVehicle(id) || {};
   if ($('vehId'))   $('vehId').value  = v.veh_id || id;
+  if ($('vehIdView')) $('vehIdView').textContent = v.veh_id || id;
   if ($('fecha'))   $('fecha').value  = (v.fecha || today()).toString().slice(0,10);
   if ($('vin'))     $('vin').value    = v.vin || '';
   if ($('marca'))   $('marca').value  = v.marca || '';
@@ -203,7 +205,6 @@ async function editVehicle(id){
 
 async function saveVehicle(){
   const payload = {
-    veh_id:        $('vehId')?.value.trim(),
     fecha:         ( ($('fecha')?.value) || today()).slice(0,10),
     vin:           $('vin')?.value.trim().toUpperCase(),
     marca:         $('marca')?.value.trim(),
@@ -215,11 +216,13 @@ async function saveVehicle(){
     foto_vehiculo: document.querySelector('#vehPhotoThumb img')?.src || null
   };
 
-  if(!payload.veh_id){
-    alert('Asigna un Vehículo ID');
-    return;
+  if (vehIdHidden) payload.veh_id = vehIdHidden;
+
+  const saved = await db.saveVehicle(payload);   // devuelve el registro con veh_id real
+  if (saved?.veh_id){
+    $('vehId').value = saved.veh_id;
+    $('vehIdView').textContent = saved.veh_id;
   }
-  await db.saveVehicle(payload);
   go('home');
   renderHome();
 }
