@@ -254,6 +254,18 @@ input:focus, select:focus, textarea:focus{
 .sev-Medio { box-shadow: inset 3px 0 #f59e0b }
 .sev-Bajo  { box-shadow: inset 3px 0 #22c55e }
 
+/* ===== Reparación (modal) — Parche de visibilidad ===== */
+#repairModal .rep-row{
+  display:grid;
+  grid-template-columns: 28px 76px 1fr auto; /* check | thumb | texto | costo */
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+}
+#repairModal .rep-main{ min-width:0; } /* evita colapso de la columna central */
+#repairModal .rep-title{ color:#e9f1f7; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#repairModal .rep-meta{  color:#e9f1f7; opacity:.9;   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
 /* =========================================================
  * Modal Daños (lista compacta)
  * =======================================================*/
