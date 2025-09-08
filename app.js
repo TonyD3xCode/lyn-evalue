@@ -140,7 +140,7 @@ async function renderHome(){
       <div class="row" style="padding:12px;border-top:1px solid var(--border)">
         <button class="btn" onclick="editVehicle('${vehId}')">Editar</button>
         <button class="btn" onclick="openDamageList('${vehId}')">Daños</button>
-        <button class="btn" onclick="openRepairList('${vehId}')">Reparación</button>
+        <button class="btn" onclick="openRepairModal('${vehId}')">Reparación</button>
         <button class="btn" onclick="openReport('${vehId}')">Reporte</button>
         <button class="btn danger" onclick="removeVehicle('${vehId}')">Eliminar</button>
       </div>`;
