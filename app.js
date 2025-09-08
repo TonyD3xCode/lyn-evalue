@@ -105,7 +105,6 @@ const db = {
 /* ---------- Estado ---------- */
 let currentVeh = null;     // veh_id (string)
 let currentDamage = null;  // objeto daño en edición
-let repairFilter = 'all'; // 'all' | 'pending' | 'done'
 
 /* =========================================================
  * Home (tarjetas)
