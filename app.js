@@ -626,17 +626,18 @@ async function renderRepairList(){
   const wrap = $('repList'); if(!wrap) return;
   wrap.innerHTML = '';
 
-  const all = await db.listDamages(currentVeh); // usa ?lite=1
-  // totales globales
+  const all = await db.listDamages(currentVeh);
+
+  // Totales
   const pend = all.filter(d=>!d.fixed);
   const pendSum = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
   $('repCount').textContent = `${all.length} daños (${pend.length} pendientes)`;
   $('repPendingSum').textContent = money(pendSum);
 
-  // ordenar: pendientes primero
+  // Pendientes primero
   all.sort((a,b)=> Number(a.fixed) - Number(b.fixed));
 
-  // filtrar
+  // Filtro
   const list = all.filter(d =>
     repairFilter==='all' ? true :
     repairFilter==='pending' ? !d.fixed : !!d.fixed
@@ -647,31 +648,41 @@ async function renderRepairList(){
     return;
   }
 
-  for(const d of list){
-    const img0 = (Array.isArray(d.imgs)&&d.imgs[0]) ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0]) : '';
+  for(const raw of list){
+    // --- Normalizamos nombres por si cambian en BD
+    const parte = raw.parte ?? raw.part ?? raw.section ?? '';
+    const ubic  = raw.ubic ?? raw.ubicacion ?? raw.location ?? '';
+    const sev   = raw.sev ?? raw.severity ?? '';
+    const cost  = Number(raw.cost ?? raw.costo ?? 0);
+    const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
+    const img0  = imgs[0] ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
+
     const row = document.createElement('div');
-    row.className = `item ${d.fixed?'is-done':''} sev-${(d.sev||'').replace(/\s+/g,'')}`;
+    row.className = `item ${raw.fixed?'is-done':''} sev-${(sev||'').replace(/\s+/g,'')}`;
     row.innerHTML = `
       <div class="rep-row">
-        <input type="checkbox" ${d.fixed?'checked':''} data-id="${d.id}" aria-label="Marcar como reparado">
+        <input type="checkbox" ${raw.fixed?'checked':''} data-id="${raw.id}" aria-label="Marcar como reparado">
         <img class="rep-thumb" src="${img0}" alt="">
         <div class="rep-main">
-          <div class="rep-title">${esc(d.parte||'')}</div>
-          <div class="rep-meta">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
+          <div class="rep-title">${esc(parte || '—')}</div>
+          <div class="rep-meta">${esc(ubic || 'Sin ubicación')} • ${esc(sev || 'Sin severidad')}</div>
         </div>
-        <span class="rep-cost pill money">${money(d.cost||0)}</span>
+        <span class="rep-cost pill money">${money(cost)}</span>
       </div>
     `;
 
+    // Toggle reparado
     row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
       const checked = ev.currentTarget.checked;
       await db.saveDamage({
-        id:d.id, veh_id:d.veh_id || currentVeh,
-        parte:d.parte, ubic:d.ubic, sev:d.sev,
-        descrption:d.descrption, cost:d.cost, imgs:d.imgs||[],
+        id: raw.id,
+        veh_id: raw.veh_id || currentVeh,
+        parte, ubic, sev,
+        descrption: raw.descrption ?? raw.description ?? '',
+        cost, imgs,
         fixed: checked
       });
-      renderRepairList(); // refresca totales y estado visual
+      renderRepairList();
     });
 
     wrap.appendChild(row);
