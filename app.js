@@ -572,6 +572,7 @@ async function renderDamageModalList(){
     box.appendChild(row);
   }
 }
+
 /* ===== Reparación (modal) ===== */
 let repairFilter = 'all'; // 'all' | 'pending' | 'done'
 
@@ -584,80 +585,84 @@ function setSeg(idActive){
 
 async function renderRepairList(){
   try{
-    const wrap = document.getElementById('repList');
-    if (!wrap) return;
-    wrap.innerHTML = '';
+    const box = document.getElementById('repList');
+    if (!box) return;
+    box.innerHTML = '';
 
-    const all = (await db.listDamages(currentVeh)) || [];
+    // Cargar daños del vehículo
+    const dataAll = await db.listDamages(currentVeh) || [];
 
-    // Totales
-    const pend = all.filter(d => !d.fixed);
+    // Totales (arriba a la derecha)
+    const pend    = dataAll.filter(d => !d.fixed);
     const pendSum = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
-    const $count = document.getElementById('repCount');
-    const $sum   = document.getElementById('repPendingSum');
-    if ($count) $count.textContent = `${all.length} daños (${pend.length} pendientes)`;
+    const $count  = document.getElementById('repCount');
+    const $sum    = document.getElementById('repPendingSum');
+    if ($count) $count.textContent = `${dataAll.length} daños (${pend.length} pendientes)`;
     if ($sum)   $sum.textContent   = money(pendSum);
 
-    // Orden: pendientes primero
-    all.sort((a,b)=> Number(a.fixed) - Number(b.fixed));
+    // Orden: primero pendientes
+    dataAll.sort((a,b)=> Number(a.fixed) - Number(b.fixed));
 
-    // Filtro
-    const list = (typeof window.repairFilter === 'string')
-      ? all.filter(d => window.repairFilter === 'all' ? true
-                         : window.repairFilter === 'pending' ? !d.fixed : !!d.fixed)
-      : all;
+    // Filtro activo
+    const list = (repairFilter==='pending') ? dataAll.filter(d=>!d.fixed)
+                : (repairFilter==='done')   ? dataAll.filter(d=> d.fixed)
+                : dataAll;
 
     if (!list.length){
-      wrap.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
+      box.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
       return;
     }
 
-    for (const raw of list){
-      // Normalización por si llegan con otros nombres
-      const parte = raw.parte ?? raw.part ?? raw.section ?? '';
-      const ubic  = raw.ubic ?? raw.ubicacion ?? raw.location ?? '';
-      const sev   = raw.sev ?? raw.severity ?? '';
-      const cost  = Number(raw.cost ?? raw.costo ?? 0);
-      const imgs  = Array.isArray(raw.imgs) ? raw.imgs : [];
-      const img0 = (Array.isArray(d.imgs)&&d.imgs[0]) ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0]) : '';
+    for (const d of list){
+      // Igual que en renderDamageModalList: mismas claves y fallbacks
+      const parte = d.parte ?? d.part ?? d.section ?? '';
+      const ubic  = d.ubic  ?? d.ubicacion ?? d.location ?? '';
+      const sev   = d.sev   ?? d.severity  ?? '';
+      const cost  = Number(d.cost ?? d.costo ?? 0);
+      const imgs  = Array.isArray(d.imgs) ? d.imgs : [];
+      const img0  = (imgs[0]) ? (imgs[0].thumb || imgs[0].full || imgs[0]) : '';
 
       const row = document.createElement('div');
-      row.className = `item ${raw.fixed ? 'is-done' : ''}`;
+      row.className = 'dmg-row';
       row.innerHTML = `
-        <div class="rep-row">
-          <input type="checkbox" ${raw.fixed ? 'checked' : ''} aria-label="Marcar como reparado">
-          <img class="rep-thumb" src="${img0}" alt="">
-          <div class="dmg-main">
-            <div class="dmg-title">${esc(parte || '')}</div>
-            <div class="rep-meta">${esc(ubic || 'Sin ubicación')} • ${esc(sev || 'Sin severidad')}</div>
+        <div class="dmg-card" style="grid-template-columns: 28px 76px 1fr auto;">
+          <input class="rep-check" type="checkbox" ${d.fixed ? 'checked' : ''} aria-label="Marcar como reparado">
+          <img class="dmg-thumb" src="${img0}" alt="">
+          <div class="dmg-main rep-body">
+            <div class="dmg-title">${esc(parte||'')}</div>
+            <div class="dmg-meta">${esc(ubic||'')} • ${esc(sev||'')}</div>
           </div>
-           <span class="dmg-cost pill money">${money(d.cost||0)}</span>
+          <span class="dmg-cost pill money">${money(cost)}</span>
         </div>
       `;
 
-      // Toggle reparado
-      row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
+      // Click en el centro abre edición (como en daños)
+      row.querySelector('.rep-body').addEventListener('click', () => {
+        closeRepair();                // cierra modal reparación
+        setTimeout(() => openSheet(d, false), 0);
+      });
+
+      // Checkbox: marcar/guardar estado fixed
+      row.querySelector('.rep-check').addEventListener('change', async (ev)=>{
+        const checked = ev.currentTarget.checked;
         try{
-          const checked = ev.currentTarget.checked;
           await db.saveDamage({
-            id: raw.id,
-            veh_id: raw.veh_id || currentVeh,
-            parte: titleTxt,
-            ubic:  ubic || '',
-            sev:   sev || '',
-            descrption: raw.descrption ?? raw.description ?? '',
+            id: d.id,
+            veh_id: d.veh_id || currentVeh,
+            parte, ubic, sev,
+            descrption: d.descrption ?? d.description ?? '',
             cost, imgs,
             fixed: checked
           });
-          renderRepairList();
+          renderRepairList(); // refresca totales y lista
         }catch(e){
           console.error(e);
           alert('No se pudo actualizar el estado.');
-          ev.currentTarget.checked = !ev.currentTarget.checked;
+          ev.currentTarget.checked = !checked; // revertir
         }
       });
 
-      wrap.appendChild(row);
+      box.appendChild(row);
     }
   }catch(e){
     console.error('renderRepairList error:', e);
