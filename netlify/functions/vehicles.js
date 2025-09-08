@@ -1,6 +1,4 @@
-// netlify/functions/vehicles.js (CommonJS con import dinámico de db.mjs)
-
-// CORS helpers
+// netlify/functions/vehicles.js  (CommonJS con adaptador a cualquier db.mjs)
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
@@ -12,15 +10,65 @@ const json = (status, body) => ({
   body: JSON.stringify(body),
 });
 
+/**
+ * Adapta lo que exporte db.mjs a una interfaz tipo:
+ *   await sql`SELECT ... WHERE id=${x}`
+ * Si no hay función etiquetada, compila la template a "text + params"
+ * y llama a .query(text, params) (Pool o Client).
+ */
+async function getSqlAdapter() {
+  const mod = await import('./db.mjs');
+
+  // Candidatos típicos que puede exportar db.mjs
+  const tagged =
+    (typeof mod.sql === 'function' && mod.sql) ||
+    (typeof mod.default === 'function' && mod.default) ||
+    (typeof mod.default?.sql === 'function' && mod.default.sql);
+
+  if (tagged) {
+    // Ya tenemos la función etiquetada (neon/sql-tag)
+    return async (strings, ...values) => tagged(strings, ...values);
+  }
+
+  // ¿Existe un "query(text, params)"?
+  const rawQuery =
+    (typeof mod.query === 'function' && mod.query) ||
+    (typeof mod.pool?.query === 'function' && mod.pool.query.bind(mod.pool)) ||
+    (typeof mod.default?.query === 'function' && mod.default.query) ||
+    (typeof mod.default?.pool?.query === 'function' && mod.default.pool.query.bind(mod.default.pool));
+
+  if (!rawQuery) {
+    throw new Error('No se encontró ni sql etiquetado ni query(text, params) en db.mjs');
+  }
+
+  // Compila la template etiquetada a text/params: SELECT ... $1 ... $2 ...
+  const compiled = async (strings, ...values) => {
+    // strings es un array de fragmentos literales
+    let text = '';
+    const params = [];
+    for (let i = 0; i < strings.length; i++) {
+      text += strings[i];
+      if (i < values.length) {
+        params.push(values[i]);
+        text += `$${params.length}`;
+      }
+    }
+    const res = await rawQuery(text, params);
+    // Normaliza resultado a array de filas
+    return res?.rows ?? res ?? [];
+  };
+
+  return compiled;
+}
+
 exports.handler = async (event) => {
-  // Importa ESM en runtime (evita ERR_REQUIRE_ESM)
-  const { sql } = await import('./db.mjs');
+  // Preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
+  }
 
   try {
-    // Preflight CORS
-    if (event.httpMethod === 'OPTIONS') {
-      return { statusCode: 200, headers: CORS_HEADERS, body: '' };
-    }
+    const sql = await getSqlAdapter();
 
     if (event.httpMethod === 'GET') {
       const id = event.queryStringParameters && event.queryStringParameters.id;
@@ -38,7 +86,6 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       const v = JSON.parse(event.body || '{}');
 
-      // Normaliza/castea
       const fecha = v.fecha ? String(v.fecha).slice(0, 10) : null;
       const anio  = v.anio ? String(v.anio) : null;
 
@@ -46,7 +93,7 @@ exports.handler = async (event) => {
       let veh_id = v.veh_id && String(v.veh_id).trim();
       if (!veh_id) {
         const r = await sql`SELECT gen_veh_id() AS id`;
-        veh_id = r[0] && r[0].id;
+        veh_id = (Array.isArray(r) ? r[0]?.id : r?.id) || null;
         if (!veh_id) return json(500, { error: 'No se pudo generar veh_id' });
       }
 
