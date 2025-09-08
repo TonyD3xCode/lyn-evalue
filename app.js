@@ -528,9 +528,11 @@ $('dmgCloseBtn')?.addEventListener('click', closeDamageModal);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && dmgModalOpen) closeDamageModal(); });
 
 // botón “+ Nuevo”
-$('dmgNewBtn')?.addEventListener('click', ()=>{
-  // usa tu función existente de alta
-  addDamage();               // abre el sheet lateral ya implementado
+$('dmgNewBtn')?.addEventListener('click', () => {
+  // cierra el modal primero
+  closeDamageModal();
+  // abre el sheet en el siguiente tick (evita que el overlay tape el sheet)
+  setTimeout(() => addDamage(), 0);
 });
 
 // render listado
@@ -563,7 +565,10 @@ async function renderDamageModalList(){
       </div>
     `;
     // al click → abrir el sheet existente para editar
-    row.addEventListener('click', ()=> openSheet(d, false));
+    row.addEventListener('click', () => {
+      closeDamageModal();
+      setTimeout(() => openSheet(d, false), 0); // abre tu sheet existente
+    });
     box.appendChild(row);
   }
 }
