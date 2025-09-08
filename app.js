@@ -105,6 +105,7 @@ const db = {
 /* ---------- Estado ---------- */
 let currentVeh = null;     // veh_id (string)
 let currentDamage = null;  // objeto daño en edición
+let repairFilter = 'all'; // 'all' | 'pending' | 'done'
 
 /* =========================================================
  * Home (tarjetas)
@@ -508,29 +509,50 @@ async function openRepairList(vehId){
 
 async function renderRepairList(){
   const wrap = $('repList');
+  if (!wrap) return;
   wrap.innerHTML = '';
-  const ds = await db.listDamages(currentVeh);
+
+  // Trae lista liviana (thumb + fixed)
+  const all = await db.listDamages(currentVeh);
+
+  // Filtrado
+  const ds = all.filter(d =>
+    repairFilter==='all'    ? true :
+    repairFilter==='pending'? !d.fixed :
+                               !!d.fixed
+  );
+
+  // Totales (siempre sobre 'all')
+  const pendCount = all.filter(d=>!d.fixed).length;
+  const pendSum   = all.filter(d=>!d.fixed).reduce((s,d)=> s + Number(d.cost||0), 0);
+  $('repCount').textContent     = `${all.length} daños (${pendCount} pendientes)`;
+  $('repPendingSum').textContent= money(pendSum);
 
   if (!ds.length){
-    wrap.innerHTML = `<div class="empty">No hay daños registrados.</div>`;
+    wrap.innerHTML = `<div class="empty">No hay daños para mostrar.</div>`;
     return;
   }
 
   for (const d of ds){
+    const img0 = (Array.isArray(d.imgs) && d.imgs[0])
+                 ? (d.imgs[0].thumb || d.imgs[0].full || d.imgs[0])
+                 : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iOCIgc3R5bGU9ImZpbGw6I2IwYjBiMGI7b3BhY2l0eT0uMTsiLz48cGF0aCBkPSJNMTIgNDhsMTQtMTRsOCw4bDgtOGwxMiAxMiIgc3R5bGU9ImZpbGw6I2ZmZjsiLz48L3N2Zz4='; // placeholder
+
     const row = document.createElement('div');
     row.className = 'item';
     row.innerHTML = `
-  <div style="display:flex;align-items:center;gap:12px;flex:1;justify-content:space-between">
-    <label style="display:flex;align-items:flex-start;gap:10px;flex:1">
-      <input type="checkbox" ${d.fixed ? 'checked' : ''} data-id="${d.id}" style="margin-top:4px">
-      <div>
-        <div class="title">${esc(d.parte||'')}</div>
-        <div class="sub">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
+      <div class="rep-row">
+        <input type="checkbox" ${d.fixed ? 'checked' : ''} data-id="${d.id}" style="margin-top:4px">
+        <img class="rep-thumb" src="${img0}" loading="lazy" alt="">
+        <div class="rep-main">
+          <div class="title">${esc(d.parte||'')}</div>
+          <div class="sub">${esc(d.ubic||'')} • ${esc(d.sev||'')}</div>
+        </div>
+        <span class="pill money" style="white-space:nowrap">${money(d.cost||0)}</span>
       </div>
-    </label>
-    <span class="pill money" style="white-space:nowrap">${money(d.cost||0)}</span>
-  </div>
-`;
+    `;
+
+    // Toggle inmediato
     row.querySelector('input[type="checkbox"]').addEventListener('change', async (ev)=>{
       const checked = ev.currentTarget.checked;
       await db.saveDamage({
@@ -541,28 +563,33 @@ async function renderRepairList(){
         imgs: d.imgs || [],
         fixed: checked
       });
+      // Recalcula totales y respeta filtro
+      renderRepairList();
     });
+
     wrap.appendChild(row);
   }
 }
 
 // Compartir pendientes (WhatsApp o nativo)
-document.getElementById('btnSharePending')?.addEventListener('click', async ()=>{
+async function sharePending(){
   const v  = await db.getVehicle(currentVeh) || {};
-  const ds = await db.listDamages(currentVeh);
-  const pend = ds.filter(d=>!d.fixed);
+  const all= await db.listDamages(currentVeh);
+  const pend = all.filter(d=>!d.fixed);
+  const total = pend.reduce((s,d)=> s + Number(d.cost||0), 0);
+
   const title = `Pendientes de reparación — ${v.marca||''} ${v.modelo||''} ${v.anio||''} (${v.veh_id||currentVeh})`;
   const lines = pend.length
-    ? pend.map((d,i)=>`${i+1}. ${d.parte||''} — ${d.ubic||''} — ${d.sev||''}`)
+    ? pend.map((d,i)=>`${i+1}. ${d.parte||''} — ${d.ubic||''} — ${d.sev||''} — ${money(d.cost||0)}`)
     : ['Sin pendientes ✅'];
-  const text = [title, '', ...lines].join('\n');
+  const footer = `\nTotal pendiente: ${money(total)}`;
+  const text = [title, '', ...lines, footer].join('\n');
 
   if (navigator.share){
     try { await navigator.share({ text }); return; } catch {}
   }
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-});
-
+}
 // Exponer a window si usas onclick
 window.openRepairList = openRepairList;
 
@@ -583,7 +610,25 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // Por defecto, mostrar FAB en Home (si la vista quedó activa)
   toggleFab(true);
+
+  // Filtros reparación
+  $('repFilterAll') ?.addEventListener('click', ()=>{ repairFilter='all';    setSeg(); renderRepairList(); });
+  $('repFilterPend')?.addEventListener('click', ()=>{ repairFilter='pending'; setSeg(); renderRepairList(); });
+  $('repFilterDone')?.addEventListener('click', ()=>{ repairFilter='done';    setSeg(); renderRepairList(); });
+
+  $('btnSharePending')?.addEventListener('click', sharePending);
 });
+
+function setSeg(){
+  ['repFilterAll','repFilterPend','repFilterDone'].forEach(id=>{
+    const el=$(id); if(!el) return;
+    el.classList.toggle('on',
+      (id==='repFilterAll'  && repairFilter==='all') ||
+      (id==='repFilterPend' && repairFilter==='pending') ||
+      (id==='repFilterDone' && repairFilter==='done')
+    );
+  });
+}
 
 // Export funciones a window por si hay onclick en HTML
 window.go = go;
