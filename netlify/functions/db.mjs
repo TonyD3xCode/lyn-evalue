@@ -1,41 +1,31 @@
-import pg from "pg";
-const { Pool } = pg;
+// netlify/functions/db.mjs  (ESM)
+import { neon, neonConfig } from '@neondatabase/serverless';
 
-let pool;
-export function getPool(){
-  if(!pool){
-    const conn = process.env.NEON_DATABASE_URL;
-    if(!conn) throw new Error("NEON_DATABASE_URL missing");
-    pool = new Pool({
-      connectionString: conn,
-      ssl: { rejectUnauthorized: false },
-      max: 4,
-      idleTimeoutMillis: 30000
-    });
-  }
-  return pool;
+// cachea la conexión entre invocaciones (mejor para Netlify)
+neonConfig.fetchConnectionCache = true;
+
+// Toma la URL de Neon desde variables de entorno
+const URL =
+  process.env.NEON_DATABASE_URL ||
+  process.env.NETLIFY_DATABASE_URL ||
+  process.env.NETLIFY_DATABASE_URL_UNPOOLED;
+
+if (!URL) {
+  throw new Error('Falta NEON_DATABASE_URL en las variables de entorno');
 }
 
-export const json = (code, data) => ({
-  statusCode: code,
-  headers: {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*"
-  },
-  body: JSON.stringify(data)
-});
+/**
+ * Exporta una función "sql" etiquetada:
+ *   await sql`SELECT * FROM tabla WHERE id=${id}`
+ */
+export const sql = neon(URL);
 
-export const preflight = (event) => {
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      },
-      body: ""
-    };
-  }
-  return null;
+/**
+ * Exporta también "query(text, params)" por compatibilidad:
+ *   await query('SELECT * FROM tabla WHERE id=$1', [id])
+ */
+export const query = async (text, params = []) => {
+  // neon permite pasar texto/params también; normalizamos a { rows }
+  const rows = await sql(text, params);
+  return Array.isArray(rows) ? { rows } : rows;
 };
