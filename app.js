@@ -197,34 +197,32 @@ async function editVehicle(id){
 }
 
 async function saveVehicle(){
-  // construimos payload en snake_case (coincide con la BD y las funciones)
+  // si estás editando, manda veh_id; si es nuevo, NO lo mandes
+  const vehIdEditing = $('vehId')?.value?.trim();
   const payload = {
-    // si estás editando, manda veh_id; si es nuevo, NO lo mandes
-    ...(currentVeh ? { veh_id: $('vehId').value.trim() } : {}),
-    fecha:         ($('fecha').value || today()).slice(0,10),
-    vin:           $('vin').value.trim().toUpperCase(),
-    marca:         $('marca').value.trim(),
-    modelo:        $('modelo').value.trim(),
-    anio:          $('anio').value.trim() || null,
-    color:         $('color').value.trim(),
-    pais:          $('pais').value.trim(),
-    notas:         $('notas').value.trim(),
+    ...(vehIdEditing ? { veh_id: vehIdEditing } : {}),
+    fecha:         ($('fecha')?.value || today()).slice(0,10),
+    vin:           $('vin')?.value.trim().toUpperCase() || null,
+    marca:         $('marca')?.value.trim() || null,
+    modelo:        $('modelo')?.value.trim() || null,
+    anio:          $('anio')?.value.trim() || null,
+    color:         $('color')?.value.trim() || null,
+    pais:          $('pais')?.value.trim() || null,
+    notas:         $('notas')?.value.trim() || null,
     foto_vehiculo: document.querySelector('#vehPhotoThumb img')?.src || null
   };
 
   const res = await db.saveVehicle(payload);
   if (!res) return;
 
-  // si el server generó el ID, úsalo
-  if (res.veh_id) {
-    currentVeh = res.veh_id;
-    $('vehId').value = res.veh_id; // visible solo-lectura si quieres
+  // si el server generó el ID, úsalo y refléjalo en el form
+  if (res.veh_id && $('vehId')) {
+    $('vehId').value = res.veh_id;
   }
 
   go('home');
   renderHome();
 }
-
 async function removeVehicle(id){
   if(confirm('¿Eliminar vehículo?')){
     await db.deleteVehicle(id);
